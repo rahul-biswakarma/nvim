@@ -19,7 +19,7 @@ return {
                 hsl_color = {
                     pattern = "hsl%(%d+,? %d+,? %d+%)",
                     group = function(_, match)
-                        local utils = require("craftzdog.utils")
+                        local utils = require("arche.utils")
                         local h, s, l = match:match(
                                             "hsl%((%d+),? (%d+),? (%d+)%)")
                         h, s, l = tonumber(h), tonumber(s), tonumber(l)
@@ -59,7 +59,7 @@ return {
             }, {
                 "<leader>fF",
                 function()
-                    require("craftzdog.picker").prettyFilesPicker({
+                    require("arche.picker").prettyFilesPicker({
                         picker = 'git_files'
                     })
                 end,
@@ -67,7 +67,7 @@ return {
             }, {
                 "<leader>ff",
                 function()
-                    require("craftzdog.picker").prettyFilesPicker({
+                    require("arche.picker").prettyFilesPicker({
                         picker = 'find_files'
                     })
                 end,
@@ -75,7 +75,7 @@ return {
             }, {
                 "<leader>/",
                 function()
-                    require("craftzdog.picker").prettyGrepPicker({
+                    require("arche.picker").prettyGrepPicker({
                         picker = 'live_grep'
                     })
                 end,
@@ -83,7 +83,7 @@ return {
             }, {
                 "<leader>|",
                 function()
-                    require("craftzdog.picker").prettyGrepPicker({
+                    require("arche.picker").prettyGrepPicker({
                         picker = 'grep_string'
                     })
                 end,
@@ -91,19 +91,19 @@ return {
             }, {
                 "<leader>fs",
                 function()
-                    require("craftzdog.picker").prettyDocumentSymbols()
+                    require("arche.picker").prettyDocumentSymbols()
                 end,
                 desc = "Document Symbols"
             }, {
                 "<leader>fw",
                 function()
-                    require("craftzdog.picker").prettyWorkspaceSymbols()
+                    require("arche.picker").prettyWorkspaceSymbols()
                 end,
                 desc = "Document Symbols"
             }, {
                 "<leader>fb",
                 function()
-                    require("craftzdog.picker").prettyBuffersPicker()
+                    require("arche.picker").prettyBuffersPicker()
                 end,
                 desc = "Buffer Picker"
             }, {
