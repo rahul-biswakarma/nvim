@@ -1,4 +1,5 @@
 require("arche.remap")
+require("arche.utils.set")
 require("arche.packer")
 require("arche.plugins")
 require("arche.utils.theme")
