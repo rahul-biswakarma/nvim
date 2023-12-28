@@ -32,4 +32,6 @@ return require('packer').startup(function(use)
         'nvim-lualine/lualine.nvim',
         requires = {'nvim-tree/nvim-web-devicons', opts = true}
     })
+    use 'APZelos/blamer.nvim'
+
 end, {display = {open_fn = require('packer.util').float}})
