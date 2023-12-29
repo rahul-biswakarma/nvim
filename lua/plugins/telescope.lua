@@ -1,38 +1,63 @@
-local telescope = require('telescope')
-local builtin = require('telescope.builtin')
-
--- File picker form git files
-vim.keymap.set('n', '<leader>ff', function()
-    require("arche.utils.picker").prettyFilesPicker({picker = 'git_files'})
-end, {})
-
--- File picker form all files
-vim.keymap.set('n', '<leader>fF', function()
-    require("arche.utils.picker").prettyFilesPicker({picker = 'find_files'})
-end, {})
-
--- Buffer picker
-vim.keymap.set('n', "<leader>fb", function()
-    require("arche.utils.picker").prettyBuffersPicker()
-end, {})
-
--- live global search
-vim.keymap.set('n', "<leader> fg", function()
-    require("arche.utils.picker").prettyGrepPicker({picker = 'live_grep'})
-end, {})
-
--- search word under your cursor
-vim.keymap.set('n', "<leader>fw", function()
-    require("arche.utils.picker").prettyGrepPicker({picker = 'grep_string'})
-end, {})
-
-telescope.setup {
+return {
+    "nvim-telescope/telescope.nvim",
+    dependencies = {
+        {"nvim-telescope/telescope-fzf-native.nvim", build = "make"},
+        "nvim-telescope/telescope-file-browser.nvim", "nvim-lua/plenary.nvim",
+        'nvim-tree/nvim-web-devicons'
+    },
+    branch = '0.1.x',
+    keys = {
+        {
+            "<leader>ff",
+            function()
+                require("utils.picker").prettyFilesPicker({picker = 'git_files'})
+            end,
+            desc = "Find Git File"
+        }, {
+            "<leader>fF",
+            function()
+                require("utils.picker").prettyFilesPicker({
+                    picker = 'find_files'
+                })
+            end,
+            desc = "Find cwd File"
+        }, {
+            "<leader>fg",
+            function()
+                require("utils.picker").prettyGrepPicker({picker = 'live_grep'})
+            end,
+            desc = "Live Grep"
+        }, {
+            "<leader>fs",
+            function()
+                require("utils.picker").prettyGrepPicker({
+                    picker = 'grep_string'
+                })
+            end,
+            desc = "Live Grep String"
+        }, {
+            ";s",
+            function()
+                local builtin = require("telescope.builtin")
+                builtin.treesitter()
+            end,
+            desc = "Lists Function names, variables, from Treesitter"
+        }
+    },
     config = function(_, opts)
         local telescope = require("telescope")
         local actions = require("telescope.actions")
         local fb_actions = require("telescope").extensions.file_browser.actions
 
-        opts.defaults = vim.tbl_deep_extend("force", opts.defaults, {
+        local defaultOpts
+
+        if (opts.defaults) then
+            defaultOpts = opts.defaults
+        else
+            defaultOpts = {}
+        end
+
+        opts.defaults = vim.tbl_deep_extend("force", defaultOpts, {
             wrap_results = true,
             layout_strategy = "horizontal",
             layout_config = {prompt_position = "top"},
@@ -89,16 +114,5 @@ telescope.setup {
         telescope.setup(opts)
         require("telescope").load_extension("fzf")
         require("telescope").load_extension("file_browser")
-    end,
-    extensions = {
-        fzf = {
-            fuzzy = true, -- false will only do exact matching
-            override_generic_sorter = true, -- override the generic sorter
-            override_file_sorter = true, -- override the file sorter
-            case_mode = "smart_case" -- or "ignore_case" or "respect_case"
-            -- the default case_mode is "smart_case"
-        }
-    }
+    end
 }
-
-telescope.load_extension('fzf')
