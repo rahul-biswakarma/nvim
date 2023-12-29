@@ -26,64 +26,79 @@ vim.keymap.set('n', "<leader>fw", function()
     require("arche.utils.picker").prettyGrepPicker({picker = 'grep_string'})
 end, {})
 
-telescope.config = function(_, opts)
-    local telescope = require("telescope")
-    local actions = require("telescope.actions")
-    local fb_actions = require("telescope").extensions.file_browser.actions
+telescope.setup {
+    config = function(_, opts)
+        local telescope = require("telescope")
+        local actions = require("telescope.actions")
+        local fb_actions = require("telescope").extensions.file_browser.actions
 
-    opts.defaults = vim.tbl_deep_extend("force", opts.defaults, {
-        wrap_results = true,
-        layout_strategy = "horizontal",
-        layout_config = {prompt_position = "top"},
-        sorting_strategy = "ascending",
-        winblend = 0,
-        mappings = {n = {}}
-    })
-    opts.pickers = {
-        diagnostics = {
-            theme = "ivy",
-            initial_mode = "normal",
-            layout_config = {preview_cutoff = 9999},
-            sorting = {
-                previewer = {
-                    get_generic_file = function(entry)
-                        return string.format("%s (%s)",
-                                             entry.path:match("([^/]+)$"),
-                                             entry.path)
-                    end
+        opts.defaults = vim.tbl_deep_extend("force", opts.defaults, {
+            wrap_results = true,
+            layout_strategy = "horizontal",
+            layout_config = {prompt_position = "top"},
+            sorting_strategy = "ascending",
+            winblend = 0,
+            mappings = {n = {}}
+        })
+        opts.pickers = {
+            diagnostics = {
+                theme = "ivy",
+                initial_mode = "normal",
+                layout_config = {preview_cutoff = 9999},
+                sorting = {
+                    previewer = {
+                        get_generic_file = function(entry)
+                            return string.format("%s (%s)",
+                                                 entry.path:match("([^/]+)$"),
+                                                 entry.path)
+                        end
+                    }
                 }
             }
         }
-    }
-    opts.extensions = {
-        file_browser = {
-            theme = "dropdown",
-            -- disables netrw and use telescope-file-browser in its place
-            hijack_netrw = true,
-            mappings = {
-                -- your custom insert mode mappings
-                ["n"] = {
-                    -- your custom normal mode mappings
-                    ["N"] = fb_actions.create,
-                    ["h"] = fb_actions.goto_parent_dir,
-                    ["/"] = function() vim.cmd("startinsert") end,
-                    ["<C-u>"] = function(prompt_bufnr)
-                        for i = 1, 10 do
-                            actions.move_selection_previous(prompt_bufnr)
-                        end
-                    end,
-                    ["<C-d>"] = function(prompt_bufnr)
-                        for i = 1, 10 do
-                            actions.move_selection_next(prompt_bufnr)
-                        end
-                    end,
-                    ["<PageUp>"] = actions.preview_scrolling_up,
-                    ["<PageDown>"] = actions.preview_scrolling_down
+        opts.extensions = {
+            file_browser = {
+                theme = "dropdown",
+                -- disables netrw and use telescope-file-browser in its place
+                hijack_netrw = true,
+                mappings = {
+                    -- your custom insert mode mappings
+                    ["n"] = {
+                        -- your custom normal mode mappings
+                        ["N"] = fb_actions.create,
+                        ["h"] = fb_actions.goto_parent_dir,
+                        ["/"] = function()
+                            vim.cmd("startinsert")
+                        end,
+                        ["<C-u>"] = function(prompt_bufnr)
+                            for i = 1, 10 do
+                                actions.move_selection_previous(prompt_bufnr)
+                            end
+                        end,
+                        ["<C-d>"] = function(prompt_bufnr)
+                            for i = 1, 10 do
+                                actions.move_selection_next(prompt_bufnr)
+                            end
+                        end,
+                        ["<PageUp>"] = actions.preview_scrolling_up,
+                        ["<PageDown>"] = actions.preview_scrolling_down
+                    }
                 }
             }
         }
+        telescope.setup(opts)
+        require("telescope").load_extension("fzf")
+        require("telescope").load_extension("file_browser")
+    end,
+    extensions = {
+        fzf = {
+            fuzzy = true, -- false will only do exact matching
+            override_generic_sorter = true, -- override the generic sorter
+            override_file_sorter = true, -- override the file sorter
+            case_mode = "smart_case" -- or "ignore_case" or "respect_case"
+            -- the default case_mode is "smart_case"
+        }
     }
-    telescope.setup(opts)
-    require("telescope").load_extension("fzf")
-    require("telescope").load_extension("file_browser")
-end
+}
+
+telescope.load_extension('fzf')
