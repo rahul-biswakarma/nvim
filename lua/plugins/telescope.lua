@@ -22,6 +22,10 @@ return {
             end,
             desc = "Find cwd File"
         }, {
+            "<leader>fb",
+            function() require("utils.picker").prettyBuffersPicker() end,
+            desc = "Buffer Picker"
+        }, {
             "<leader>fg",
             function()
                 require("utils.picker").prettyGrepPicker({picker = 'live_grep'})
