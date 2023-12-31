@@ -291,8 +291,7 @@ return {
         })
 
         vim.keymap.set("n", "<leader>o",
-                       ":Neotree source=filesystem reveal=true position=left <CR>")
-        vim.keymap.set("n", "<leader>O",
-                       ":Neotree source=filesystem reveal=false <CR>")
+                       ":Neotree source=filesystem reveal=true position=left <CR>",
+                       {silent = true})
     end
 }
