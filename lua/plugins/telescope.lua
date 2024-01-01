@@ -8,13 +8,13 @@ return {
     branch = '0.1.x',
     keys = {
         {
-            "<leader>ff",
+            "<leader>fF",
             function()
                 require("utils.picker").prettyFilesPicker({picker = 'git_files'})
             end,
             desc = "Find Git File"
         }, {
-            "<leader>fF",
+            "<leader>ff",
             function()
                 require("utils.picker").prettyFilesPicker({
                     picker = 'find_files'
