@@ -2,9 +2,7 @@ vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 
 -- remove ~ from the end of the file
-vim.api.nvim_command('set fillchars=eob:\\ ')
-
-vim.opt.guicursor = ""
+vim.api.nvim_command("set fillchars=eob:\\ ")
 
 vim.opt.nu = true
 vim.opt.relativenumber = true
