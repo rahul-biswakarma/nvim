@@ -6,11 +6,25 @@ return {
     'WhoIsSethDaniel/mason-tool-installer.nvim',
     { 
       'j-hui/fidget.nvim',
-      opts = {
-        notification = {
-          window = { winblend = 0 },
-        },
-      },
+      tag = 'legacy',
+      config = function()
+        require('fidget').setup({
+          notification = {
+            window = { winblend = 0 },
+          },
+          progress = {
+            display = {
+              done_icon = '✓',
+              done_ttl = 1,
+              done_icon_hl_group = 'FidgetDone',
+              icon = { pattern = 'dots', period = 1 },
+              icon_hl_group = 'FidgetTitle',
+              render_limit = 16,
+              view = 'mini',
+            },
+          },
+        })
+      end,
     },
     'folke/neodev.nvim',
   },
@@ -52,7 +66,126 @@ return {
       vim.keymap.set('v', '<leader>ca', vim.lsp.buf.code_action, { buffer = bufnr, noremap = true, silent = true, desc = 'LSP: [C]ode [A]ction' })
       vim.keymap.set('v', '<leader>a', vim.lsp.buf.code_action, { buffer = bufnr, noremap = true, silent = true, desc = 'LSP: Code [A]ction' })
       
-      nmap('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+      local function is_use_statement(uri, line)
+        local bufnr = vim.uri_to_bufnr(uri)
+        if not vim.api.nvim_buf_is_valid(bufnr) then
+          return false
+        end
+        
+        local lines = vim.api.nvim_buf_get_lines(bufnr, math.max(0, line - 2), line + 2, false)
+        if not lines or #lines == 0 then
+          return false
+        end
+        
+        for _, line_content in ipairs(lines) do
+          local content = line_content:gsub('%s+', ' ')
+          if content:match('^%s*use%s+') or content:match('^%s*pub%s+use%s+') or content:match('^%s*mod%s+') then
+            return true
+          end
+        end
+        
+        return false
+      end
+      
+      local function is_definition(location)
+        local uri = location.uri or location.filename
+        local bufnr = vim.uri_to_bufnr(uri)
+        if not vim.api.nvim_buf_is_valid(bufnr) then
+          return false
+        end
+        
+        local line = (location.lnum or location.line or 0) - 1
+        local start_line = math.max(0, line - 5)
+        local end_line = line + 5
+        local lines = vim.api.nvim_buf_get_lines(bufnr, start_line, end_line, false)
+        if not lines or #lines == 0 then
+          return false
+        end
+        
+        for _, line_content in ipairs(lines) do
+          local content = line_content:gsub('%s+', ' ')
+          if content:match('^%s*use%s+') or content:match('^%s*pub%s+use%s+') or content:match('^%s*mod%s+') then
+            return false
+          end
+          if content:match('^%s*pub%s+fn%s+') or content:match('^%s*fn%s+') or 
+             content:match('^%s*pub%s+struct%s+') or content:match('^%s*struct%s+') or
+             content:match('^%s*pub%s+enum%s+') or content:match('^%s*enum%s+') or
+             content:match('^%s*pub%s+impl%s+') or content:match('^%s*impl%s+') or
+             content:match('^%s*pub%s+trait%s+') or content:match('^%s*trait%s+') then
+            return true
+          end
+        end
+        
+        return false
+      end
+
+      local function goto_definition_smart()
+        local clients = vim.lsp.get_clients({ bufnr = 0 })
+        local offset_encoding = clients[1] and clients[1].offset_encoding or 'utf-16'
+        local params = vim.lsp.util.make_position_params(0, offset_encoding)
+        vim.lsp.buf_request(0, 'textDocument/definition', params, function(err, result, ctx)
+          if err then
+            vim.notify('Error finding definition: ' .. tostring(err), vim.log.levels.ERROR)
+            return
+          end
+
+          if not result or vim.tbl_isempty(result) then
+            vim.notify('No definition found', vim.log.levels.INFO)
+            return
+          end
+
+          local client = vim.lsp.get_client_by_id(ctx.client_id)
+          local offset_encoding = client and client.offset_encoding or 'utf-16'
+          
+          local locations = vim.lsp.util.locations_to_items(result, offset_encoding)
+          if not locations or #locations == 0 then
+            return
+          end
+
+          local preferred_location = nil
+          local use_locations = {}
+          local other_locations = {}
+
+          for _, location in ipairs(locations) do
+            local uri = location.uri or location.filename
+            local line = (location.lnum or location.line or 0) - 1
+            
+            if is_use_statement(uri, line) then
+              table.insert(use_locations, location)
+            elseif is_definition(location) then
+              preferred_location = location
+              break
+            else
+              table.insert(other_locations, location)
+            end
+          end
+          
+          local function jump_to_file(location)
+            if not location then
+              return
+            end
+            vim.lsp.util.jump_to_location(location, offset_encoding)
+            vim.cmd('normal! zz')
+          end
+
+          if preferred_location then
+            jump_to_file(preferred_location)
+          elseif #other_locations > 0 then
+            jump_to_file(other_locations[1])
+          elseif #use_locations > 0 then
+            if #use_locations == 1 then
+              jump_to_file(use_locations[1])
+            else
+              require('telescope.builtin').lsp_definitions()
+            end
+          else
+            jump_to_file(locations[1])
+          end
+        end)
+      end
+
+      nmap('gd', goto_definition_smart, '[G]oto [D]efinition')
+      nmap('<leader>gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinitions (Telescope)')
       nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
       nmap('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
       nmap('<leader>D', vim.lsp.buf.type_definition, 'Type [D]efinition')
@@ -91,35 +224,6 @@ return {
         Lua = {
           workspace = { checkThirdParty = false },
           telemetry = { enable = false },
-        },
-      },
-      rust_analyzer = {
-        ['rust-analyzer'] = {
-          cargo = {
-            allFeatures = true,
-            loadOutDirsFromCheck = true,
-          },
-          checkOnSave = {
-            command = 'clippy',
-          },
-          procMacro = {
-            enable = true,
-          },
-          inlayHints = {
-            bindingModeHints = { enable = true },
-            chainingHints = { enable = true },
-            closingBraceHints = { enable = true, minLines = 10 },
-            closureReturnTypeHints = { enable = 'always' },
-            lifetimeElisionHints = { enable = 'skip_trivial', useParameterNames = true },
-            parameterHints = { enable = true },
-            reborrowHints = { enable = 'always' },
-            renderColons = true,
-            typeHints = {
-              enable = true,
-              hideClosureInitialization = false,
-              hideNamedConstructor = false,
-            },
-          },
         },
       },
     }
