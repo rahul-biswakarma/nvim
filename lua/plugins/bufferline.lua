@@ -56,6 +56,88 @@ return {
         },
         sort_by = 'insert_after_current',
       },
+      highlights = {
+        buffer_selected = {
+          fg = '#ff9e64',
+          bg = '#0f1a20',
+          bold = true,
+        },
+        buffer_visible = {
+          fg = '#7aa2f7',
+          bg = '#0a1217',
+        },
+        background = {
+          fg = '#565f89',
+          bg = '#0a1217',
+        },
+        tab_selected = {
+          fg = '#ff9e64',
+          bg = '#0f1a20',
+        },
+        tab = {
+          fg = '#565f89',
+          bg = '#0a1217',
+        },
+        tab_close = {
+          fg = '#565f89',
+          bg = '#0a1217',
+        },
+        close_button = {
+          fg = '#565f89',
+          bg = '#0a1217',
+        },
+        close_button_visible = {
+          fg = '#565f89',
+          bg = '#0a1217',
+        },
+        close_button_selected = {
+          fg = '#ff9e64',
+          bg = '#0f1a20',
+        },
+        indicator_selected = {
+          fg = '#ff9e64',
+          bg = '#0f1a20',
+        },
+        modified = {
+          fg = '#f7768e',
+          bg = '#0a1217',
+        },
+        modified_visible = {
+          fg = '#f7768e',
+          bg = '#0a1217',
+        },
+        modified_selected = {
+          fg = '#f7768e',
+          bg = '#0f1a20',
+        },
+        duplicate_selected = {
+          fg = '#ff9e64',
+          bg = '#0f1a20',
+          italic = true,
+        },
+        duplicate_visible = {
+          fg = '#7aa2f7',
+          bg = '#0a1217',
+          italic = true,
+        },
+        duplicate = {
+          fg = '#565f89',
+          bg = '#0a1217',
+          italic = true,
+        },
+        separator_selected = {
+          fg = '#0f1a20',
+          bg = '#0f1a20',
+        },
+        separator_visible = {
+          fg = '#0a1217',
+          bg = '#0a1217',
+        },
+        separator = {
+          fg = '#0a1217',
+          bg = '#0a1217',
+        },
+      },
     }
 
     -- Keymaps for buffer navigation
