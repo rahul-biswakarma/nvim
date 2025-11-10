@@ -1,0 +1,24 @@
+# Lazy.nvim lock file (auto-generated)
+lazy-lock.json
+
+# Session files
+*.session
+sessions/
+
+# Temporary files
+*.swp
+*.swo
+*~
+.*.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backup files
+*.bak
+*.backup
+
