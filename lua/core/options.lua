@@ -14,6 +14,9 @@ vim.o.timeoutlen = 300
 vim.o.completeopt = 'menuone,noselect'
 vim.o.termguicolors = true
 
+-- Font (for GUI Neovim clients like Neovide)
+vim.opt.guifont = 'JetBrainsMono Nerd Font:h14'
+
 -- Disable netrw
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
