@@ -8,16 +8,13 @@ return {
       'j-hui/fidget.nvim',
       opts = {
         notification = {
-          window = {
-            winblend = 0,
-          },
+          window = { winblend = 0 },
         },
       },
     },
     'folke/neodev.nvim',
   },
   config = function()
-    -- Add borders to hover and signature help windows
     vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(vim.lsp.handlers.hover, {
       border = 'rounded',
     })
@@ -25,11 +22,10 @@ return {
       border = 'rounded',
     })
 
-    -- Configure diagnostics with borders
     vim.diagnostic.config({
       float = {
         border = 'rounded',
-        source = 'always',  -- Show source (e.g., 'rust-analyzer')
+        source = 'always',
         header = '',
         prefix = '',
         focusable = true,
@@ -51,9 +47,8 @@ return {
 
       nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
       nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
-      nmap('<leader>a', vim.lsp.buf.code_action, 'Code [A]ction (alternative)')
+      nmap('<leader>a', vim.lsp.buf.code_action, 'Code [A]ction')
       
-      -- Visual mode code action
       vim.keymap.set('v', '<leader>ca', vim.lsp.buf.code_action, { buffer = bufnr, noremap = true, silent = true, desc = 'LSP: [C]ode [A]ction' })
       vim.keymap.set('v', '<leader>a', vim.lsp.buf.code_action, { buffer = bufnr, noremap = true, silent = true, desc = 'LSP: Code [A]ction' })
       
@@ -72,14 +67,12 @@ return {
         print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
       end, '[W]orkspace [L]ist Folders')
       
-      -- Show diagnostics in floating window
       nmap('gl', function() vim.diagnostic.open_float(nil, { focus = false, scope = 'line' }) end, 'Show [L]ine diagnostics')
       nmap('<leader>d', function() vim.diagnostic.open_float() end, 'Show [D]iagnostics popup')
       nmap('[d', vim.diagnostic.goto_prev, 'Go to previous [d]iagnostic')
       nmap(']d', vim.diagnostic.goto_next, 'Go to next [d]iagnostic')
       nmap('<leader>q', vim.diagnostic.setloclist, 'Open diagnostics [q]uickfix list')
 
-      -- Enable inlay hints if supported
       if client.server_capabilities.inlayHintProvider then
         vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
         nmap('<leader>th', function()
@@ -113,29 +106,13 @@ return {
             enable = true,
           },
           inlayHints = {
-            bindingModeHints = {
-              enable = true,
-            },
-            chainingHints = {
-              enable = true,
-            },
-            closingBraceHints = {
-              enable = true,
-              minLines = 10,
-            },
-            closureReturnTypeHints = {
-              enable = 'always',
-            },
-            lifetimeElisionHints = {
-              enable = 'skip_trivial',
-              useParameterNames = true,
-            },
-            parameterHints = {
-              enable = true,
-            },
-            reborrowHints = {
-              enable = 'always',
-            },
+            bindingModeHints = { enable = true },
+            chainingHints = { enable = true },
+            closingBraceHints = { enable = true, minLines = 10 },
+            closureReturnTypeHints = { enable = 'always' },
+            lifetimeElisionHints = { enable = 'skip_trivial', useParameterNames = true },
+            parameterHints = { enable = true },
+            reborrowHints = { enable = 'always' },
             renderColons = true,
             typeHints = {
               enable = true,

@@ -14,18 +14,17 @@ return {
     { '<leader>fb', ':Neotree float buffers<CR>', desc = 'Buffers', silent = true },
   },
   config = function()
-    -- If you want icons for diagnostic errors, you'll need to define them somewhere:
     vim.fn.sign_define('DiagnosticSignError', { text = ' ', texthl = 'DiagnosticSignError' })
     vim.fn.sign_define('DiagnosticSignWarn', { text = ' ', texthl = 'DiagnosticSignWarn' })
     vim.fn.sign_define('DiagnosticSignInfo', { text = ' ', texthl = 'DiagnosticSignInfo' })
     vim.fn.sign_define('DiagnosticSignHint', { text = '󰌵', texthl = 'DiagnosticSignHint' })
 
     require('neo-tree').setup({
-      close_if_last_window = true, -- Close Neo-tree if it is the last window left in the tab
+      close_if_last_window = true,
       popup_border_style = 'rounded',
       enable_git_status = true,
       enable_diagnostics = true,
-      open_files_do_not_replace_types = { 'terminal', 'trouble', 'qf' }, -- when opening files, do not use windows containing these filetypes or buftypes
+      open_files_do_not_replace_types = { 'terminal', 'trouble', 'qf' },
       sort_case_insensitive = false,
       sort_function = nil,
       default_component_configs = {
@@ -62,15 +61,15 @@ return {
         },
         git_status = {
           symbols = {
-            added     = '',  -- or "A"
-            modified  = '',  -- or "M"  
-            deleted   = '',  -- or "D"
-            renamed   = '',  -- or "R"
-            untracked = '',  -- or "U"
-            ignored   = '',  -- or "I"
-            unstaged  = '',  -- or "●"
-            staged    = '',  -- or "✓"
-            conflict  = '',  -- or "!"
+            added     = '',
+            modified  = '',
+            deleted   = '',
+            renamed   = '',
+            untracked = '',
+            ignored   = '',
+            unstaged  = '',
+            staged    = '',
+            conflict  = '',
           },
         },
         file_size = {
@@ -97,7 +96,6 @@ return {
       window = {
         position = 'left',
         width = 35,
-        -- Set inactive background to black
         winhighlight = {
           'Normal:NeoTreeNormal',
           'NormalNC:NeoTreeNormalNC',
@@ -239,7 +237,6 @@ return {
       },
     })
 
-    -- Auto open on startup if directory
     vim.api.nvim_create_autocmd('BufEnter', {
       group = vim.api.nvim_create_augroup('NeoTreeInit', { clear = true }),
       callback = function()
@@ -251,4 +248,3 @@ return {
     })
   end,
 }
-
