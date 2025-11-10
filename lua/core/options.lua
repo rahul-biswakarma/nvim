@@ -1,6 +1,7 @@
 -- Core Options
 vim.o.hlsearch = false
 vim.o.number = true
+vim.o.cursorline = true
 vim.o.mouse = ''
 vim.o.clipboard = 'unnamedplus'
 vim.o.breakindent = true
@@ -41,16 +42,19 @@ function vim.lsp.util.open_floating_preview(contents, syntax, opts, ...)
   return orig_util_open_floating_preview(contents, syntax, opts, ...)
 end
 
--- Inactive window backgrounds
 vim.api.nvim_create_autocmd('ColorScheme', {
   pattern = '*',
   callback = function()
+    vim.api.nvim_set_hl(0, 'Normal', { bg = '#0a1217' })
+    vim.api.nvim_set_hl(0, 'CursorLine', { bg = '#0f1a20' })
     vim.api.nvim_set_hl(0, 'NormalNC', { bg = '#000000' })
     vim.api.nvim_set_hl(0, 'NeoTreeNormalNC', { bg = '#000000' })
     vim.api.nvim_set_hl(0, 'NeoTreeNormal', { bg = 'NONE' })
   end,
 })
 
+vim.api.nvim_set_hl(0, 'Normal', { bg = '#0a1217' })
+vim.api.nvim_set_hl(0, 'CursorLine', { bg = '#0f1a20' })
 vim.api.nvim_set_hl(0, 'NormalNC', { bg = '#000000' })
 vim.api.nvim_set_hl(0, 'NeoTreeNormalNC', { bg = '#000000' })
 vim.api.nvim_set_hl(0, 'NeoTreeNormal', { bg = 'NONE' })
