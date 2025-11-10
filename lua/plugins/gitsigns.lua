@@ -31,12 +31,12 @@ return {
       status_formatter = nil, -- Use default
       max_file_length = 40000,
       preview_config = {
-        -- Options passed to nvim_open_win
-        border = 'single',
+        border = 'rounded',
         style = 'minimal',
         relative = 'cursor',
         row = 0,
         col = 1,
+        focusable = false,
       },
       
       on_attach = function(bufnr)
@@ -79,6 +79,12 @@ return {
         map('n', '<leader>hb', function()
           gs.blame_line { full = true }
         end)
+        map('n', '<leader>gb', function()
+          gs.blame_line { 
+            full = true,
+            ignore_whitespace = false,
+          }
+        end, { desc = 'Show git line contributor' })
         map('n', '<leader>tb', gs.toggle_current_line_blame)
         map('n', '<leader>hd', gs.diffthis)
         map('n', '<leader>hD', function()

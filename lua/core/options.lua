@@ -50,6 +50,7 @@ vim.api.nvim_create_autocmd('ColorScheme', {
     vim.api.nvim_set_hl(0, 'NormalNC', { bg = '#000000' })
     vim.api.nvim_set_hl(0, 'NeoTreeNormalNC', { bg = '#000000' })
     vim.api.nvim_set_hl(0, 'NeoTreeNormal', { bg = 'NONE' })
+    vim.api.nvim_set_hl(0, 'LazyGitBorder', { fg = '#ff9e64', bg = '#0a1217' })
   end,
 })
 
@@ -58,3 +59,4 @@ vim.api.nvim_set_hl(0, 'CursorLine', { bg = '#0f1a20' })
 vim.api.nvim_set_hl(0, 'NormalNC', { bg = '#000000' })
 vim.api.nvim_set_hl(0, 'NeoTreeNormalNC', { bg = '#000000' })
 vim.api.nvim_set_hl(0, 'NeoTreeNormal', { bg = 'NONE' })
+vim.api.nvim_set_hl(0, 'LazyGitBorder', { fg = '#ff9e64', bg = '#0a1217' })

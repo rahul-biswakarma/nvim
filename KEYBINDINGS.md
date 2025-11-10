@@ -106,6 +106,11 @@ gR                  LSP references
 
 ```
 Space + gg          LazyGit
+Space + gb          Show git line contributor (blame popup)
+Space + hb          Show git blame line (alternative)
+Space + hs          Stage hunk
+Space + hr          Reset hunk
+Space + hp          Preview hunk
 ```
 
 ## Text Selection (Insert Mode)
