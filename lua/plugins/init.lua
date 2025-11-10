@@ -34,7 +34,8 @@ return {
   }, build = ':TSUpdate' },
   { 'windwp/nvim-ts-autotag' },
   { 'm-demare/hlargs.nvim', dependencies = { 'nvim-treesitter/nvim-treesitter' } },
-  { 'jose-elias-alvarez/null-ls.nvim', dependencies = { 'nvim-lua/plenary.nvim' } },
+  { 'mfussenegger/nvim-lint' },
+  { 'stevearc/conform.nvim' },
   { 'folke/trouble.nvim', dependencies = { 'nvim-tree/nvim-web-devicons' } },
 
   -- Editing & Text Manipulation

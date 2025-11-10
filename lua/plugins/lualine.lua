@@ -10,17 +10,13 @@ return {
 
       local buf_client_names = {}
       for _, client in pairs(buf_clients) do
-        if client.name ~= 'null-ls' then
-          table.insert(buf_client_names, client.name)
-        end
+        table.insert(buf_client_names, client.name)
       end
 
       local unique_client_names = table.concat(buf_client_names, ', ')
       return string.format('[%s]', unique_client_names)
     end
 
-    local lsp_progress_data = {}
-    
     local function lsp_progress()
       local ok, fidget = pcall(require, 'fidget')
       if not ok then
@@ -52,16 +48,6 @@ return {
       end
       return ''
     end
-    
-    vim.loop.new_timer():start(300, 300, vim.schedule_wrap(function()
-      local ok, fidget = pcall(require, 'fidget')
-      if ok and fidget.status then
-        local progress = fidget.status.progress()
-        if progress then
-          lsp_progress_data = progress
-        end
-      end
-    end))
 
     local function treesitter_status()
       local bufnr = vim.api.nvim_get_current_buf()
@@ -105,7 +91,9 @@ return {
         update_system_stats()
       end
       
-      return string.format('CPU:%s%% RAM:%sGB', system_stats_cache.cpu, system_stats_cache.mem)
+      local cpu = system_stats_cache.cpu or '0'
+      local mem = system_stats_cache.mem or '0.0'
+      return string.format('CPU:%s%% RAM:%sGB', cpu, mem)
     end
     
     update_system_stats()
@@ -173,7 +161,7 @@ return {
           },
           {
             lsp_client,
-            icon = ' ',
+            icon = '',
             color = { fg = '#7aa2f7' },
           },
           'encoding',
