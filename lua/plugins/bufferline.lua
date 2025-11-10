@@ -143,7 +143,22 @@ return {
     -- Keymaps for buffer navigation
     vim.keymap.set('n', '<Tab>', ':BufferLineCycleNext<CR>', { noremap = true, silent = true, desc = 'Next buffer' })
     vim.keymap.set('n', '<S-Tab>', ':BufferLineCyclePrev<CR>', { noremap = true, silent = true, desc = 'Previous buffer' })
-    vim.keymap.set('n', '<leader>x', ':bdelete<CR>', { noremap = true, silent = true, desc = 'Close buffer' })
+    vim.keymap.set('n', '<leader>x', function()
+      local current_buf = vim.api.nvim_get_current_buf()
+      local bufs = vim.tbl_filter(function(bufnr)
+        return vim.api.nvim_buf_is_valid(bufnr) 
+          and vim.bo[bufnr].buflisted 
+          and bufnr ~= current_buf
+      end, vim.api.nvim_list_bufs())
+      
+      if #bufs == 0 then
+        vim.notify('Cannot close last buffer', vim.log.levels.WARN)
+        return
+      end
+      
+      vim.cmd('BufferLineCycleNext')
+      vim.cmd('bdelete ' .. current_buf)
+    end, { noremap = true, silent = true, desc = 'Close buffer' })
     vim.keymap.set('n', '<leader>bp', ':BufferLineTogglePin<CR>', { noremap = true, silent = true, desc = 'Pin buffer' })
     vim.keymap.set('n', '<leader>bP', ':BufferLineGroupClose ungrouped<CR>', { noremap = true, silent = true, desc = 'Close unpinned buffers' })
   end,
