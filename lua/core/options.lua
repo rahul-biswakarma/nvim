@@ -14,6 +14,38 @@ vim.o.timeoutlen = 300
 vim.o.completeopt = 'menuone,noselect'
 vim.o.termguicolors = true
 
+-- Disable touchpad/mouse wheel scrolling completely
+-- Disable mouse completely
+vim.o.mouse = ''
+
+-- Disable scroll events - defer to avoid conflicts with plugins like lualine
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'LazyDone',
+  callback = function()
+    vim.schedule(function()
+      local scroll_events = {
+        '<ScrollWheelUp>',
+        '<ScrollWheelDown>',
+        '<S-ScrollWheelUp>',
+        '<S-ScrollWheelDown>',
+        '<C-ScrollWheelUp>',
+        '<C-ScrollWheelDown>',
+        '<A-ScrollWheelUp>',
+        '<A-ScrollWheelDown>',
+      }
+      
+      for _, mode in ipairs({ 'n', 'i', 'v', 'c', 't', 'x', 's', 'o' }) do
+        for _, event in ipairs(scroll_events) do
+          pcall(function()
+            vim.keymap.set(mode, event, '<Nop>', { noremap = true, silent = true })
+          end)
+        end
+      end
+    end)
+  end,
+  once = true,
+})
+
 -- Font (for GUI Neovim clients like Neovide)
 vim.opt.guifont = 'JetBrainsMono Nerd Font:h14'
 

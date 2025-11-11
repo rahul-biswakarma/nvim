@@ -43,6 +43,16 @@ vim.keymap.set('i', '<M-Del>', '<C-o>dw', { desc = 'Delete word forward' })
 vim.keymap.set('i', '<C-u>', '<C-u>', { desc = 'Delete to start of line' })
 vim.keymap.set('i', '<C-k>', '<C-o>D', { desc = 'Delete to end of line' })
 
+-- Insert Mode: Line Movement (Option + Up/Down)
+-- Move current line up/down
+vim.keymap.set('i', '<M-Up>', '<Esc>:m-2<CR>==gi', { desc = 'Move line up' })
+vim.keymap.set('i', '<M-Down>', '<Esc>:m+<CR>==gi', { desc = 'Move line down' })
+
+-- Insert Mode: Copy and Move Line (Option + Shift + Up/Down)
+-- Copy current line above/below
+vim.keymap.set('i', '<M-S-Up>', '<Esc>:t-1<CR>==gi', { desc = 'Copy line up' })
+vim.keymap.set('i', '<M-S-Down>', '<Esc>:t.<CR>==gi', { desc = 'Copy line down' })
+
 -- Highlight on Yank
 local highlight_group = vim.api.nvim_create_augroup('YankHighlight', { clear = true })
 vim.api.nvim_create_autocmd('TextYankPost', {
