@@ -35,7 +35,6 @@ function M.set_active_buddy(buddy_name)
   if session_state.active_buddy_name ~= buddy_name then
     session_state.active_buddy_name = buddy_name
     M.reset_for_buddy_switch()
-    vim.notify("Switched buddy to: " .. buddy_name)
   end
 end
 

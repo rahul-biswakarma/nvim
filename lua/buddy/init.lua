@@ -81,8 +81,6 @@ function M.setup(user_opts)
       end
     end)
   end, { desc = "Send message to buddy" })
-
-  vim.notify("Buddy framework loaded!", vim.log.levels.INFO)
 end
 
 return M

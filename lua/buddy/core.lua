@@ -94,9 +94,7 @@ local function handle_llm_response(response_content)
   if parsed.response_type == "speak" and parsed.message then
     local clean_message = parsed.message:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
     local last_buddy_message = state.get_last_buddy_message()
-    if last_buddy_message and last_buddy_message == clean_message then
-      vim.notify("Skipping duplicate buddy response.", vim.log.levels.INFO)
-    else
+    if not (last_buddy_message and last_buddy_message == clean_message) then
       state.add_chat_message("buddy", clean_message)
       ui.render()
     end
@@ -113,11 +111,9 @@ end
 
 local function trigger_llm(reason)
   if state.is_pending_response() then
-    vim.notify("An LLM request is already in progress.", vim.log.levels.INFO)
     return
   end
 
-  vim.notify("Triggering LLM. Reason: " .. reason)
   state.set_pending_response(true)
 
   local buddy_name = state.get_active_buddy()
