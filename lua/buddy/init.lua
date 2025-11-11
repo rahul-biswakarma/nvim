@@ -11,36 +11,44 @@ local config = require("buddy.config")
 
 function M.setup(user_opts)
   config.setup(user_opts)
-  core.init()
 
-  local function open_buddy_window_safely()
-    -- The user's startup sequence fires "StartupUnlocked" when it's done.
-    -- We wait for that event to avoid opening our window too early.
-    if vim.g.startup_unlocked then
-      -- If startup is already done, open the window after a short delay.
-      vim.defer_fn(ui.open, 300)
-    else
-      -- Otherwise, wait for the signal.
-      vim.api.nvim_create_autocmd("User", {
-        pattern = "StartupUnlocked",
-        once = true,
-        callback = function()
-          vim.defer_fn(ui.open, 300)
-        end,
-      })
+  local core_initialized = false
+  local function ensure_core()
+    if not core_initialized then
+      core.init()
+      core_initialized = true
     end
   end
 
-  -- Attempt to open the window once Neovim has entered.
+  local function on_startup_unlocked()
+    ensure_core()
+    vim.api.nvim_del_augroup_by_name("BuddyStartupInit")
+  end
+
+  local group = vim.api.nvim_create_augroup("BuddyStartupInit", { clear = true })
+  vim.api.nvim_create_autocmd("User", {
+    group = group,
+    pattern = "StartupUnlocked",
+    callback = on_startup_unlocked,
+  })
+
   vim.api.nvim_create_autocmd("VimEnter", {
     once = true,
-    callback = open_buddy_window_safely,
+    callback = function()
+      if vim.g.startup_unlocked then
+        ensure_core()
+      end
+    end,
   })
 
   -- Register user commands
-  vim.api.nvim_create_user_command("BuddyToggle", ui.toggle, { desc = "Toggle the buddy chat window." })
+  vim.api.nvim_create_user_command("BuddyToggle", function()
+    ensure_core()
+    ui.toggle()
+  end, { desc = "Toggle the buddy chat window." })
 
   vim.api.nvim_create_user_command("BuddySet", function(args)
+    ensure_core()
     local buddy_name = args.fargs[1]
     if buddy_name and #buddy_name > 0 then
       state.set_active_buddy(buddy_name)
@@ -56,7 +64,7 @@ function M.setup(user_opts)
   })
 
   vim.api.nvim_create_user_command("BuddyGroup", function(args)
-    -- For now, this is just an alias for BuddySet as per the plan.
+    ensure_core()
     local group_name = args.fargs[1]
     if group_name and #group_name > 0 then
       state.set_active_buddy(group_name)
@@ -66,8 +74,6 @@ function M.setup(user_opts)
   end, {
     nargs = 1,
     complete = function()
-      -- We can't easily distinguish groups from single buddies yet,
-      -- so we show all available profiles.
       return profiles.get_available_buddies()
     end,
     desc = "Set the active buddy to a group profile.",
@@ -75,6 +81,7 @@ function M.setup(user_opts)
 
   -- Keymap for sending messages
   vim.keymap.set("n", "<leader>aa", function()
+    ensure_core()
     vim.ui.input({ prompt = "Message to " .. state.get_active_buddy() .. ": " }, function(input)
       if input and #input > 0 then
         core.on_user_message(input)

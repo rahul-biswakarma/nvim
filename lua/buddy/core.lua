@@ -96,6 +96,9 @@ local function handle_llm_response(response_content)
     local last_buddy_message = state.get_last_buddy_message()
     if not (last_buddy_message and last_buddy_message == clean_message) then
       state.add_chat_message("buddy", clean_message)
+      if not ui.is_open() then
+        ui.open()
+      end
       ui.render()
     end
   end
@@ -141,6 +144,9 @@ end
 
 function M.on_user_message(message)
   state.add_chat_message("user", message)
+  if not ui.is_open() then
+    ui.open()
+  end
   ui.render()
   trigger_llm("User sent a message")
 end
@@ -153,16 +159,14 @@ local function setup_timers()
 end
 
 ---Initializes the core module.
-function M.init()
-  config.setup()
+function M.init(opts)
+  opts = opts or {}
   state.init()
+  if opts.buddy_name then
+    state.set_active_buddy(opts.buddy_name)
+  end
   events.setup_listeners(M.add_event)
   setup_timers()
-
-  -- Trigger on startup
-  vim.defer_fn(function()
-    trigger_llm("Neovim startup")
-  end, 1000)
 end
 
 return M

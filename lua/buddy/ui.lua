@@ -129,4 +129,8 @@ function M.toggle()
   end
 end
 
+function M.is_open()
+  return ui_state.win_id and vim.api.nvim_win_is_valid(ui_state.win_id)
+end
+
 return M
