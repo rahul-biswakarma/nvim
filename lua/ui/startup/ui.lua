@@ -51,12 +51,13 @@ local function get_welcome_text(pin_handler)
 end
 
 -- Apply syntax highlighting
-local function apply_highlights()
-  if not startup_buf or not vim.api.nvim_buf_is_valid(startup_buf) then
+local function apply_highlights(buf)
+  buf = buf or startup_buf
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then
     return
   end
   
-  vim.api.nvim_buf_clear_namespace(startup_buf, -1, 0, -1)
+  vim.api.nvim_buf_clear_namespace(buf, -1, 0, -1)
   
   local hl_map = art_header.opts.hl
   local first_art_line = art_header.val[1]
@@ -69,7 +70,7 @@ local function apply_highlights()
       local hl_name = hl_info[1]
       local start_col = hl_info[2] + padding_offset
       local end_col = hl_info[3] + padding_offset
-      vim.api.nvim_buf_add_highlight(startup_buf, -1, hl_name, line_idx, start_col, end_col)
+      vim.api.nvim_buf_add_highlight(buf, -1, hl_name, line_idx, start_col, end_col)
     end
   end
 end
@@ -83,7 +84,7 @@ function M.update_buffer(pin_handler)
   vim.api.nvim_buf_set_option(startup_buf, 'modifiable', true)
   local lines = get_welcome_text(pin_handler)
   vim.api.nvim_buf_set_lines(startup_buf, 0, -1, false, lines)
-  apply_highlights()
+  apply_highlights(startup_buf)
   vim.api.nvim_buf_set_option(startup_buf, 'modifiable', false)
 end
 
@@ -150,7 +151,7 @@ local function create_startup_buffer(pin_handler, unlock_callback)
   
   local lines = get_welcome_text(pin_handler)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  apply_highlights()
+  apply_highlights(buf)
   
   vim.api.nvim_buf_set_option(buf, 'modifiable', false)
   
