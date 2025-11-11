@@ -32,6 +32,7 @@ return {
     -- COMPLETION SETUP
     -- ============================================================================
     cmp.setup {
+      preselect = cmp.PreselectMode.None,
       -- Snippet expansion
       snippet = {
         expand = function(args)
@@ -61,7 +62,7 @@ return {
         ['<C-Space>'] = cmp.mapping.complete {},         -- Manually trigger completion
         ['<CR>'] = cmp.mapping.confirm {                 -- Accept completion
           behavior = cmp.ConfirmBehavior.Replace,
-          select = true,
+          select = false,                                -- Only confirm if explicitly selected
         },
         
         -- Smart Tab: Navigate completion OR expand/jump snippets

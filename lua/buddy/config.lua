@@ -28,6 +28,11 @@ M.options = {
   ollama = {
     endpoint = "http://localhost:11434/api/chat",
     timeout = 30000, -- 30 seconds
+    json_fixer = {
+      model = "gemma3:12b",
+      temperature = 0,
+      max_tokens = 512,
+    },
   },
 
   -- External data fetching settings

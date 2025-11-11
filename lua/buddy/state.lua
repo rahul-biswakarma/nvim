@@ -14,6 +14,7 @@ local session_state = {
   browser_tabs_cache = {},
   last_llm_call_time = 0,
   pending_response = false,
+  trigger_queue = {},
 }
 
 ---Initializes the state module.
@@ -27,6 +28,7 @@ function M.reset_for_buddy_switch()
   session_state.session_chat_history = {}
   session_state.event_accumulator = {}
   session_state.llm_internal_state = ""
+  session_state.trigger_queue = {}
 end
 
 ---Sets the active buddy.
@@ -116,6 +118,21 @@ end
 
 function M.set_pending_response(pending)
     session_state.pending_response = pending
+end
+
+function M.enqueue_trigger(reason)
+  table.insert(session_state.trigger_queue, reason)
+end
+
+function M.dequeue_trigger()
+  if #session_state.trigger_queue == 0 then
+    return nil
+  end
+  return table.remove(session_state.trigger_queue, 1)
+end
+
+function M.has_queued_triggers()
+  return #session_state.trigger_queue > 0
 end
 
 function M.get_last_buddy_message()

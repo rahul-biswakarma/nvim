@@ -1,6 +1,6 @@
 {
   "llm": {
-    "model": "Tohur/natsumura-storytelling-rp-llama-3.1:latest",
+    "model": "nollama/mythomax-l2-13b:Q4_K_M",
     "temperature": 0.6,
     "max_tokens": 10000
   }

@@ -11,6 +11,21 @@ local external = require("buddy.external")
 local ui = require("buddy.ui")
 local events = require("buddy.events")
 
+local trigger_llm -- forward declaration
+
+local function process_trigger_queue()
+  if state.is_pending_response() then
+    return
+  end
+  local next_reason = state.dequeue_trigger()
+  if not next_reason then
+    return
+  end
+  vim.schedule(function()
+    trigger_llm(next_reason)
+  end)
+end
+
 local function extract_json(str)
   if not str then return nil end
   -- Find the first '{' and the last '}' to extract the JSON block.
@@ -72,48 +87,115 @@ local function build_user_prompt()
   return table.concat(context_lines, "\n")
 end
 
-local function handle_llm_response(response_content)
-  state.set_pending_response(false) -- No longer pending
+local function handle_llm_response(response_content, ctx)
+  local function finalize()
+    state.set_pending_response(false)
+    process_trigger_queue()
+  end
+
   if not response_content then
-    -- This can happen if the request failed (e.g., on_stderr)
+    finalize()
     return
   end
 
-  local json_str = extract_json(response_content)
-  if not json_str then
-    vim.notify("Could not find valid JSON in LLM response: " .. response_content, vim.log.levels.ERROR, { timeout = false })
-    return
-  end
-
-  local ok, parsed = pcall(vim.json.decode, json_str)
-  if not ok then
-    vim.notify("Failed to parse LLM JSON response: " .. json_str, vim.log.levels.ERROR, { timeout = false })
-    return
-  end
-
-  if parsed.response_type == "speak" and parsed.message then
-    local clean_message = parsed.message:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
-    local last_buddy_message = state.get_last_buddy_message()
-    if not (last_buddy_message and last_buddy_message == clean_message) then
-      state.add_chat_message("buddy", clean_message)
-      if not ui.is_open() then
-        ui.open()
+  local function apply_parsed_response(parsed)
+    if parsed.response_type == "speak" and parsed.message then
+      local clean_message = parsed.message:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
+      local last_buddy_message = state.get_last_buddy_message()
+      if not (last_buddy_message and last_buddy_message == clean_message) then
+        state.add_chat_message("buddy", clean_message)
+        if not ui.is_open() then
+          ui.open()
+        end
+        ui.render()
       end
-      ui.render()
+    end
+
+    if parsed.new_topic_ideas then
+      profiles.add_topics(state.get_active_buddy(), parsed.new_topic_ideas)
+    end
+
+    if parsed.internal_state_update then
+      state.set_llm_internal_state(parsed.internal_state_update)
     end
   end
 
-  if parsed.new_topic_ideas then
-    profiles.add_topics(state.get_active_buddy(), parsed.new_topic_ideas)
+  local function handle_valid_json(parsed)
+    apply_parsed_response(parsed)
+    finalize()
   end
 
-  if parsed.internal_state_update then
-    state.set_llm_internal_state(parsed.internal_state_update)
+  local function request_json_fix(raw_response)
+    local fixer_opts = config.options.ollama.json_fixer or {}
+    local fixer_model = fixer_opts.model or "gemma3:12b"
+    vim.notify(
+      string.format("LLM JSON parse failed. Attempting repair via %s.", fixer_model),
+      vim.log.levels.WARN
+    )
+
+    local fixer_system_prompt = table.concat({
+      "You repair JSON responses produced by another assistant.",
+      "Return strictly valid JSON that conforms to the schema described in the provided instructions.",
+      "Do not include markdown code fences, commentary, or additional explanation.",
+    }, "\n")
+
+    local user_prompt_parts = {
+      "Assistant instructions (system prompt) that describe the required JSON schema:",
+      ctx and ctx.system_prompt or "(missing system prompt)",
+      "",
+      "Here is the assistant response that failed to parse as JSON:",
+      raw_response,
+      "",
+      "Produce corrected JSON only. Do not wrap the result or add commentary.",
+    }
+    local fixer_user_prompt = table.concat(user_prompt_parts, "\n")
+
+    local fixer_profile = {
+      llm = {
+        model = fixer_model,
+        temperature = fixer_opts.temperature or 0,
+        max_tokens = fixer_opts.max_tokens or 512,
+      },
+    }
+
+    state.set_pending_response(true)
+    ollama.request(fixer_profile, fixer_system_prompt, fixer_user_prompt, {}, "JSON Fixer", function(fix_response)
+      if not fix_response then
+        vim.notify("JSON fixer failed to return a response.", vim.log.levels.ERROR, { timeout = false })
+        finalize()
+        return
+      end
+
+      local fixed_json = extract_json(fix_response) or fix_response
+      local ok_fix, parsed_fix = pcall(vim.json.decode, fixed_json)
+      if not ok_fix then
+        vim.notify("JSON fixer returned invalid JSON: " .. fixed_json, vim.log.levels.ERROR, { timeout = false })
+        finalize()
+        return
+      end
+
+      handle_valid_json(parsed_fix)
+    end)
   end
+
+  local json_str = extract_json(response_content)
+  if json_str then
+    local ok, parsed = pcall(vim.json.decode, json_str)
+    if ok then
+      handle_valid_json(parsed)
+      return
+    end
+    vim.notify("Failed to parse LLM JSON response; attempting repair.", vim.log.levels.WARN)
+  else
+    vim.notify("Could not find JSON object in LLM response; attempting repair.", vim.log.levels.WARN)
+  end
+
+  request_json_fix(response_content)
 end
 
-local function trigger_llm(reason)
+function trigger_llm(reason)
   if state.is_pending_response() then
+    state.enqueue_trigger(reason)
     return
   end
 
@@ -131,8 +213,14 @@ local function trigger_llm(reason)
   local history = state.get_chat_history()
 
   state.clear_event_accumulator()
-
-  ollama.request(profile, system_prompt, user_prompt, history, reason, handle_llm_response)
+  ollama.request(profile, system_prompt, user_prompt, history, reason, function(response_content)
+    handle_llm_response(response_content, {
+      buddy_name = buddy_name,
+      system_prompt = system_prompt,
+      user_prompt = user_prompt,
+      reason = reason,
+    })
+  end)
 end
 
 function M.add_event(event_type, details)
