@@ -114,4 +114,11 @@ return {
   { 'folke/todo-comments.nvim', dependencies = { 'nvim-lua/plenary.nvim' } },  -- TODO highlighting
   { 'akinsho/toggleterm.nvim', version = '*' },  -- Terminal
   { 'rmagatti/auto-session' },                   -- Session management
+  
+  -- ============================================================================
+  -- CUSTOM/LOCAL PLUGINS
+  -- ============================================================================
+  -- Keystroke Analytics (Custom)
+  -- Note: This is a local plugin, not from GitHub. See keystroke-analytics.lua for config.
+  -- Set enabled = true in the plugin file to activate.
 }

@@ -235,6 +235,14 @@ M.trouble_loclist = '<leader>xl'
 M.trouble_references = 'gR'
 
 -- ============================================================================
+-- KEYSTROKE ANALYTICS
+-- ============================================================================
+M.analytics_toggle = '<leader>ka'
+M.analytics_pause = '<leader>kp'
+M.analytics_status = '<leader>ks'
+M.analytics_export = '<leader>ke'
+
+-- ============================================================================
 -- MISC
 -- ============================================================================
 M.next_reference = ']]'  -- Note: Conflicts with Treesitter class navigation in some contexts

@@ -25,3 +25,5 @@ require('core.autocmds')
 require('ui.startup').config()
 
 require('lazy').setup('plugins')
+
+-- Note: keystroke-analytics.lua is auto-loaded by lazy.nvim from plugins/ directory
