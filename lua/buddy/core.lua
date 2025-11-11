@@ -188,7 +188,7 @@ local function handle_llm_response(response_content, ctx)
 
   local function request_json_fix(raw_response)
     local fixer_opts = config.options.ollama.json_fixer or {}
-    local fixer_model = fixer_opts.model or "gemma3:12b"
+    local fixer_model = fixer_opts.model or "gemma3:4b"
     vim.notify(
       string.format("LLM JSON parse failed. Attempting repair via %s.", fixer_model),
       vim.log.levels.WARN

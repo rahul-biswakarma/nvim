@@ -29,9 +29,9 @@ M.options = {
     endpoint = "http://localhost:11434/api/chat",
     timeout = 30000, -- 30 seconds
     json_fixer = {
-      model = "gemma3:12b",
+      model = "gemma3:4b",
       temperature = 0,
-      max_tokens = 512,
+      max_tokens = 10000,
     },
   },
 
