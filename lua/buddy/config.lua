@@ -4,7 +4,7 @@ local M = {}
 
 M.options = {
   -- The default buddy to load on startup
-  default_buddy = "sung",
+  default_buddy = "bro",
 
   -- Base directory for all buddy data
   data_path = vim.fn.expand('~/Documents/.raw/buddy/'),

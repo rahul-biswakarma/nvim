@@ -52,6 +52,7 @@ local function build_user_prompt()
   local event_accumulator = state.get_event_accumulator()
   local internal_state = state.get_llm_internal_state()
   local chat_history = state.get_chat_history()
+  local memory_notes = profiles.get_memory(buddy_name)
 
   -- Gather context
   local git_comments = external.get_last_git_comments(5)
@@ -68,6 +69,13 @@ local function build_user_prompt()
     table.insert(context_lines, "\nRecent Activity (Since last talk):")
     -- Simple summary for now
     table.insert(context_lines, string.format("- %d editor events occurred.", #event_accumulator))
+  end
+
+  table.insert(context_lines, "\n[MEMORIES]")
+  if memory_notes and memory_notes ~= "" then
+    table.insert(context_lines, memory_notes)
+  else
+    table.insert(context_lines, "(No stored memories yet.)")
   end
 
   table.insert(context_lines, "\nLLM Internal State (Your Scratchpad):\n" .. internal_state)
@@ -98,9 +106,50 @@ local function handle_llm_response(response_content, ctx)
     return
   end
 
-  local function apply_parsed_response(parsed)
-    if parsed.response_type == "speak" and parsed.message then
-      local clean_message = parsed.message:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
+  local function extract_fallback_message(raw, json_segment)
+    if not raw or not json_segment then
+      return nil
+    end
+    local start_idx = raw:find(json_segment, 1, true)
+    if not start_idx then
+      return nil
+    end
+    local after_json = raw:sub(start_idx + #json_segment)
+    after_json = after_json:gsub("^%s+", ""):gsub("%s+$", "")
+    if after_json ~= "" then
+      return after_json
+    end
+    return nil
+  end
+
+  local function apply_parsed_response(parsed, raw, json_segment)
+    local response_type = parsed.response_type
+    local message = parsed.message
+    local internal_state_update = parsed.internal_state_update
+
+    if response_type == vim.NIL then
+      response_type = nil
+    end
+    if message == vim.NIL then
+      message = nil
+    elseif type(message) ~= "string" then
+      message = tostring(message)
+    end
+    if internal_state_update == vim.NIL then
+      internal_state_update = nil
+    elseif type(internal_state_update) ~= "string" then
+      internal_state_update = tostring(internal_state_update)
+    end
+
+    if response_type == "speak" and (not message or message == "") then
+      message = extract_fallback_message(raw, json_segment)
+    end
+    if response_type == "speak" and (not message or message == "") and internal_state_update and internal_state_update ~= "" then
+      message = internal_state_update
+    end
+
+    if response_type == "speak" and message and message ~= "" then
+      local clean_message = message:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
       local last_buddy_message = state.get_last_buddy_message()
       if not (last_buddy_message and last_buddy_message == clean_message) then
         state.add_chat_message("buddy", clean_message)
@@ -111,17 +160,29 @@ local function handle_llm_response(response_content, ctx)
       end
     end
 
-    if parsed.new_topic_ideas then
-      profiles.add_topics(state.get_active_buddy(), parsed.new_topic_ideas)
+    local new_topic_ideas = parsed.new_topic_ideas
+    if new_topic_ideas == vim.NIL then
+      new_topic_ideas = nil
+    end
+    if new_topic_ideas then
+      profiles.add_topics(state.get_active_buddy(), new_topic_ideas)
     end
 
-    if parsed.internal_state_update then
-      state.set_llm_internal_state(parsed.internal_state_update)
+    local memory_to_store = parsed.memory_to_store
+    if memory_to_store == vim.NIL then
+      memory_to_store = nil
+    end
+    if memory_to_store then
+      profiles.append_memory(ctx and ctx.buddy_name or state.get_active_buddy(), memory_to_store)
+    end
+
+    if internal_state_update then
+      state.set_llm_internal_state(internal_state_update)
     end
   end
 
-  local function handle_valid_json(parsed)
-    apply_parsed_response(parsed)
+  local function handle_valid_json(parsed, raw, json_segment)
+    apply_parsed_response(parsed, raw, json_segment)
     finalize()
   end
 
@@ -174,7 +235,7 @@ local function handle_llm_response(response_content, ctx)
         return
       end
 
-      handle_valid_json(parsed_fix)
+      handle_valid_json(parsed_fix, fix_response, fixed_json)
     end)
   end
 
@@ -182,7 +243,7 @@ local function handle_llm_response(response_content, ctx)
   if json_str then
     local ok, parsed = pcall(vim.json.decode, json_str)
     if ok then
-      handle_valid_json(parsed)
+      handle_valid_json(parsed, response_content, json_str)
       return
     end
     vim.notify("Failed to parse LLM JSON response; attempting repair.", vim.log.levels.WARN)

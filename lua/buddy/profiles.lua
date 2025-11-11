@@ -49,6 +49,56 @@ function M.get_topic_bank(buddy_name)
   return data
 end
 
+---Loads the buddy's long-term memory entries as a string.
+---@param buddy_name string
+---@return string
+function M.get_memory(buddy_name)
+  local path = M.get_buddy_data_path(buddy_name) .. "/memory.txt"
+  local file = io.open(path, "r")
+  if not file then
+    return ""
+  end
+  local content = file:read("*a")
+  file:close()
+  return content or ""
+end
+
+---Appends one or more memory lines to the buddy's memory file.
+---@param buddy_name string
+---@param memory_entry string | table
+function M.append_memory(buddy_name, memory_entry)
+  if not memory_entry then
+    return
+  end
+
+  local lines = {}
+  if type(memory_entry) == "string" then
+    if memory_entry:match("%S") then
+      table.insert(lines, memory_entry)
+    end
+  elseif vim.islist(memory_entry) then
+    for _, entry in ipairs(memory_entry) do
+      if type(entry) == "string" and entry:match("%S") then
+        table.insert(lines, entry)
+      end
+    end
+  end
+
+  if vim.tbl_isempty(lines) then
+    return
+  end
+
+  local path = M.get_buddy_data_path(buddy_name) .. "/memory.txt"
+  local file = io.open(path, "a")
+  if not file then
+    return
+  end
+  for _, line in ipairs(lines) do
+    file:write(line, "\n")
+  end
+  file:close()
+end
+
 ---Appends new topic ideas to the buddy's topic bank.
 ---@param buddy_name string
 ---@param new_ideas table
@@ -61,7 +111,7 @@ function M.add_topics(buddy_name, new_ideas)
   if type(new_ideas) == "table" then
     if new_ideas.idea then
       ideas_list = { new_ideas }
-    elseif vim.tbl_islist(new_ideas) then
+    elseif vim.islist(new_ideas) then
       ideas_list = new_ideas
     end
   elseif type(new_ideas) == "string" then
