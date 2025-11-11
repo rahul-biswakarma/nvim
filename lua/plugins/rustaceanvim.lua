@@ -1,26 +1,59 @@
+--[[
+  Rustaceanvim - Enhanced Rust LSP
+  
+  Provides advanced Rust development features via rust-analyzer.
+  Includes smart goto-definition that skips use statements.
+  
+  Features:
+  - Smart goto-definition (skips use statements, finds actual definitions)
+  - Code actions, runnables, testables, debuggables
+  - Macro expansion and error explanations
+  - Comprehensive inlay hints
+  - Clippy integration for linting
+]]
+
 return {
   'mrcjkb/rustaceanvim',
   version = '^5',
   lazy = false,
   ft = { 'rust' },
   config = function()
+    local keys = require('core.keybindings-registry')
+    local kb = require('core.keybindings-registry')
+    
     vim.g.rustaceanvim = {
+      -- ============================================================================
+      -- TOOLS CONFIGURATION
+      -- ============================================================================
       tools = {
+        -- Inlay hints configuration
         inlay_hints = {
-          auto = true,
-          show_parameter_hints = true,
-          parameter_hints_prefix = '<- ',
-          other_hints_prefix = '=> ',
+          auto = true,                      -- Enable inlay hints
+          show_parameter_hints = true,      -- Show parameter names
+          parameter_hints_prefix = '<- ',   -- Prefix for parameter hints
+          other_hints_prefix = '=> ',       -- Prefix for other hints
         },
+        
+        -- Hover actions configuration
         hover_actions = {
-          auto_focus = true,
-          border = 'rounded',
+          auto_focus = true,   -- Auto-focus hover window
+          border = 'rounded',  -- Rounded borders
         },
       },
+      
+      -- ============================================================================
+      -- LSP SERVER CONFIGURATION
+      -- ============================================================================
       server = {
+        -- ========================================================================
+        -- ON_ATTACH: SETUP KEYMAPS AND SMART GOTO-DEFINITION
+        -- ========================================================================
         on_attach = function(client, bufnr)
           local opts = { buffer = bufnr, noremap = true, silent = true }
           
+          -- ======================================================================
+          -- HELPER: CHECK IF LOCATION IS A USE STATEMENT
+          -- ======================================================================
           local function is_use_statement(uri_or_filename, line)
             local bufnr
             if uri_or_filename:match('^file://') or uri_or_filename:match('^[a-z]+://') then
@@ -48,10 +81,14 @@ return {
             return false
           end
           
+          -- ======================================================================
+          -- SMART GOTO-DEFINITION (SKIPS USE STATEMENTS)
+          -- ======================================================================
           local function goto_definition_smart()
             local clients = vim.lsp.get_clients({ bufnr = 0 })
             local offset_encoding = clients[1] and clients[1].offset_encoding or 'utf-16'
             local params = vim.lsp.util.make_position_params(0, offset_encoding)
+            
             vim.lsp.buf_request(0, 'textDocument/definition', params, function(err, result, ctx)
               if err then
                 vim.notify('Error finding definition: ' .. tostring(err), vim.log.levels.ERROR)
@@ -76,6 +113,7 @@ return {
                 return
               end
               
+              -- Filter out use statements
               local preferred_location = nil
               local use_locations = {}
               
@@ -91,6 +129,7 @@ return {
                 end
               end
               
+              -- Jump to location helper
               local function jump_to_location(location)
                 if not location then
                   return
@@ -123,6 +162,7 @@ return {
                 vim.cmd('normal! zz')
               end
               
+              -- Jump to preferred location (non-use statement)
               if preferred_location then
                 jump_to_location(preferred_location)
               elseif #use_locations > 0 then
@@ -137,49 +177,68 @@ return {
             end)
           end
           
-          vim.keymap.set('n', 'gd', goto_definition_smart, { buffer = bufnr, noremap = true, silent = true, desc = 'Go to Definition (skip use)' })
+          -- ======================================================================
+          -- KEYMAPS (Using centralized registry)
+          -- ======================================================================
+          -- Smart goto-definition (overrides default LSP gd)
+          kb.register_keymap('rustaceanvim', 'n', keys.lsp_goto_definition, goto_definition_smart, 
+            vim.tbl_extend('force', opts, { desc = 'Go to Definition (skip use)' }))
           
-          vim.keymap.set('n', '<leader>ra', function() vim.cmd.RustLsp('codeAction') end, 
-            { buffer = bufnr, desc = 'Rust code action' })
-          vim.keymap.set('n', '<leader>rd', function() vim.cmd.RustLsp('debuggables') end,
-            { buffer = bufnr, desc = 'Rust debuggables' })
-          vim.keymap.set('n', '<leader>rr', function() vim.cmd.RustLsp('runnables') end,
-            { buffer = bufnr, desc = 'Rust runnables' })
-          vim.keymap.set('n', '<leader>rt', function() vim.cmd.RustLsp('testables') end,
-            { buffer = bufnr, desc = 'Rust testables' })
-          vim.keymap.set('n', '<leader>rm', function() vim.cmd.RustLsp('expandMacro') end,
-            { buffer = bufnr, desc = 'Rust expand macro' })
-          vim.keymap.set('n', '<leader>rc', function() vim.cmd.RustLsp('openCargo') end,
-            { buffer = bufnr, desc = 'Open Cargo.toml' })
-          vim.keymap.set('n', '<leader>rp', function() vim.cmd.RustLsp('parentModule') end,
-            { buffer = bufnr, desc = 'Go to parent module' })
-          vim.keymap.set('n', '<leader>rj', function() vim.cmd.RustLsp('joinLines') end,
-            { buffer = bufnr, desc = 'Join lines' })
-          vim.keymap.set('n', 'K', function() vim.cmd.RustLsp({ 'hover', 'actions' }) end,
-            { buffer = bufnr, desc = 'Hover actions' })
-          vim.keymap.set('n', '<leader>re', function() vim.cmd.RustLsp('explainError') end,
-            { buffer = bufnr, desc = 'Explain error' })
-          vim.keymap.set('n', '<leader>rD', function() vim.cmd.RustLsp('renderDiagnostic') end,
-            { buffer = bufnr, desc = 'Render diagnostic' })
+          -- Rust-specific actions
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_code_action, function() vim.cmd.RustLsp('codeAction') end, 
+            vim.tbl_extend('force', opts, { desc = 'Rust code action' }))
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_debuggables, function() vim.cmd.RustLsp('debuggables') end,
+            vim.tbl_extend('force', opts, { desc = 'Rust debuggables' }))
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_runnables, function() vim.cmd.RustLsp('runnables') end,
+            vim.tbl_extend('force', opts, { desc = 'Rust runnables' }))
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_testables, function() vim.cmd.RustLsp('testables') end,
+            vim.tbl_extend('force', opts, { desc = 'Rust testables' }))
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_expand_macro, function() vim.cmd.RustLsp('expandMacro') end,
+            vim.tbl_extend('force', opts, { desc = 'Rust expand macro' }))
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_open_cargo, function() vim.cmd.RustLsp('openCargo') end,
+            vim.tbl_extend('force', opts, { desc = 'Open Cargo.toml' }))
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_parent_module, function() vim.cmd.RustLsp('parentModule') end,
+            vim.tbl_extend('force', opts, { desc = 'Go to parent module' }))
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_join_lines, function() vim.cmd.RustLsp('joinLines') end,
+            vim.tbl_extend('force', opts, { desc = 'Join lines' }))
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_explain_error, function() vim.cmd.RustLsp('explainError') end,
+            vim.tbl_extend('force', opts, { desc = 'Explain error' }))
+          kb.register_keymap('rustaceanvim', 'n', keys.rust_render_diagnostic, function() vim.cmd.RustLsp('renderDiagnostic') end,
+            vim.tbl_extend('force', opts, { desc = 'Render diagnostic' }))
+          
+          -- Enhanced hover (overrides default LSP K)
+          kb.register_keymap('rustaceanvim', 'n', keys.lsp_hover, function() vim.cmd.RustLsp({ 'hover', 'actions' }) end,
+            vim.tbl_extend('force', opts, { desc = 'Hover actions' }))
         end,
+        
+        -- ========================================================================
+        -- RUST-ANALYZER DEFAULT SETTINGS
+        -- ========================================================================
         default_settings = {
           ['rust-analyzer'] = {
+            -- Cargo configuration
             cargo = {
-              allFeatures = true,
-              loadOutDirsFromCheck = true,
+              allFeatures = true,             -- Enable all cargo features
+              loadOutDirsFromCheck = true,    -- Load output directories
               buildScripts = {
-                enable = true,
+                enable = true,                -- Enable build scripts
               },
             },
+            
+            -- Check configuration (using Clippy)
             checkOnSave = true,
             check = {
               allFeatures = true,
-              command = 'clippy',
-              extraArgs = { '--no-deps' },
+              command = 'clippy',             -- Use Clippy instead of check
+              extraArgs = { '--no-deps' },    -- Don't check dependencies
             },
+            
+            -- Experimental features
             experimental = {
-              locallinks = 'full',
+              locallinks = 'full',            -- Enable local links
             },
+            
+            -- Proc macro configuration
             procMacro = {
               enable = true,
               ignored = {
@@ -188,33 +247,37 @@ return {
                 ['async-recursion'] = { 'async_recursion' },
               },
             },
+            
+            -- ====================================================================
+            -- INLAY HINTS CONFIGURATION
+            -- ====================================================================
             inlayHints = {
               bindingModeHints = {
-                enable = true,
+                enable = true,                -- Show binding mode hints
               },
               chainingHints = {
-                enable = true,
+                enable = true,                -- Show chaining hints
               },
               closingBraceHints = {
-                enable = true,
-                minLines = 10,
+                enable = true,                -- Show closing brace hints
+                minLines = 10,                -- Minimum lines to show
               },
               closureReturnTypeHints = {
-                enable = 'always',
+                enable = 'always',            -- Show closure return types
               },
               lifetimeElisionHints = {
-                enable = 'skip_trivial',
-                useParameterNames = true,
+                enable = 'skip_trivial',      -- Show lifetime hints (skip trivial)
+                useParameterNames = true,     -- Use parameter names
               },
               parameterHints = {
-                enable = true,
+                enable = true,                -- Show parameter hints
               },
               reborrowHints = {
-                enable = 'always',
+                enable = 'always',            -- Show reborrow hints
               },
-              renderColons = true,
+              renderColons = true,            -- Render colons in hints
               typeHints = {
-                enable = true,
+                enable = true,                -- Show type hints
                 hideClosureInitialization = false,
                 hideNamedConstructor = false,
               },
@@ -222,6 +285,10 @@ return {
           },
         },
       },
+      
+      -- ============================================================================
+      -- DAP (DEBUG ADAPTER PROTOCOL)
+      -- ============================================================================
       dap = {},
     }
   end,

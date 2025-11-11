@@ -1,45 +1,82 @@
+--[[
+  Comment - Smart Code Commenting
+  
+  Quickly comment/uncomment code with context-aware commenting.
+  Supports line and block comments for all languages via Treesitter.
+  
+  NOTE: Keymaps use plugin's internal config (can't be centralized).
+]]
+
 return {
   'numToStr/Comment.nvim',
+  event = 'VeryLazy',
   opts = {
-    -- Add a space in the comment string
-    padding = true,
-    -- Whether the cursor should stay at its position
-    sticky = true,
-    -- Lines to be ignored while comment/uncomment. Perfect for leaving shebang at the top of files
-    ignore = '^$',
-    -- LHS of toggle mappings in NORMAL mode
+    -- ============================================================================
+    -- BEHAVIOR
+    -- ============================================================================
+    padding = true,         -- Add space after comment string
+    sticky = true,          -- Cursor stays at position
+    ignore = '^$',          -- Ignore empty lines
+    
+    -- ============================================================================
+    -- KEYMAPS (Plugin Config - Not Centralized)
+    -- ============================================================================
+    -- Toggle mappings in NORMAL mode
     toggler = {
-      -- Line-comment toggle keymap
-      line = '<leader>/',
-      -- Block-comment toggle keymap
-      block = '<leader>bc',
+      line = '<leader>/',   -- Toggle line comment
+      block = '<leader>bc', -- Toggle block comment
     },
-    -- LHS of operator-pending mappings in NORMAL and VISUAL mode
+    
+    -- Operator-pending mappings in NORMAL and VISUAL mode
     opleader = {
-      -- Line-comment keymap
-      line = '<leader>/',
-      -- Block-comment keymap
-      block = '<leader>bc',
+      line = '<leader>/',   -- Line comment operator
+      block = '<leader>bc', -- Block comment operator
     },
-    -- LHS of extra mappings
+    
+    -- Extra mappings
     extra = {
-      -- Add comment on the line above
-      above = '<leader>cO',
-      -- Add comment on the line below
-      below = '<leader>co',
-      -- Add comment at the end of line
-      eol = '<leader>cA',
+      above = '<leader>cO', -- Add comment above
+      below = '<leader>co', -- Add comment below
+      eol = '<leader>cA',   -- Add comment at end of line
     },
-    -- Enable keybindings
+    
+    -- ============================================================================
+    -- MAPPING FEATURES
+    -- ============================================================================
     mappings = {
-      -- Operator-pending mapping; `gcc` `gbc` `gc[count]{motion}` `gb[count]{motion}`
-      basic = true,
-      -- Extra mapping; `gco` `gcO` `gcA`
-      extra = true,
+      basic = true,  -- Enable gcc, gbc, gc[count]{motion}, gb[count]{motion}
+      extra = true,  -- Enable gco, gcO, gcA
     },
-    -- Function to call before (un)comment
-    pre_hook = nil,
-    -- Function to call after (un)comment
-    post_hook = nil,
+    
+    -- ============================================================================
+    -- HOOKS
+    -- ============================================================================
+    pre_hook = nil,   -- Function to call before (un)comment
+    post_hook = nil,  -- Function to call after (un)comment
   },
+  config = function(_, opts)
+    require('Comment').setup(opts)
+    
+    -- ============================================================================
+    -- REGISTER KEYMAPS FOR TRACKING
+    -- ============================================================================
+    local kb = require('core.keybindings-registry')
+    
+    -- Register for conflict detection (keymaps defined above in plugin config)
+    kb.register_keymaps('comment', {
+      { 'n', '<leader>/', 'comment', { desc = 'Toggle line comment' } },
+      { 'v', '<leader>/', 'comment', { desc = 'Toggle line comment' } },
+      { 'n', '<leader>bc', 'comment', { desc = 'Toggle block comment' } },
+      { 'v', '<leader>bc', 'comment', { desc = 'Toggle block comment' } },
+      { 'n', '<leader>cO', 'comment', { desc = 'Comment above' } },
+      { 'n', '<leader>co', 'comment', { desc = 'Comment below' } },
+      { 'n', '<leader>cA', 'comment', { desc = 'Comment end of line' } },
+      { 'n', 'gcc', 'comment', { desc = 'Toggle line comment' } },
+      { 'n', 'gbc', 'comment', { desc = 'Toggle block comment' } },
+      { 'n', 'gc', 'comment', { desc = 'Comment operator' } },
+      { 'v', 'gc', 'comment', { desc = 'Comment selection' } },
+      { 'n', 'gb', 'comment', { desc = 'Block comment operator' } },
+      { 'v', 'gb', 'comment', { desc = 'Block comment selection' } },
+    })
+  end,
 }

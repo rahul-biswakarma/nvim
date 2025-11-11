@@ -1,41 +1,49 @@
--- Core Autocommands
+--[[
+  Core Autocommands
+  
+  Automatic behaviors triggered by Neovim events.
+]]
 
--- Highlight on Yank
-local highlight_group = vim.api.nvim_create_augroup('YankHighlight', { clear = true })
+local utils = require('core.utils')
+
+-- ============================================================================
+-- VISUAL FEEDBACK
+-- ============================================================================
+
+-- Highlight yanked text briefly
 vim.api.nvim_create_autocmd('TextYankPost', {
   callback = function()
     vim.highlight.on_yank()
   end,
-  group = highlight_group,
+  group = vim.api.nvim_create_augroup('YankHighlight', { clear = true }),
   pattern = '*',
 })
 
--- Startup: Open File Tree
+-- ============================================================================
+-- STARTUP BEHAVIOR
+-- ============================================================================
+
+-- Open file tree on startup (if no files opened and no startup screen)
 vim.api.nvim_create_autocmd('VimEnter', {
   callback = function()
+    -- Skip if startup screen is active (it handles Neo-tree)
+    if utils.has_startup_screen() then
+      return
+    end
+    
+    -- Close default file browser if it opened
     if vim.bo.filetype == 'netrw' then
       vim.cmd('bd')
     end
     
+    -- Close buffer if a directory was opened
     if vim.fn.isdirectory(vim.fn.expand('%')) == 1 then
       vim.cmd('bd')
     end
     
+    -- Open Neo-tree if no files were opened
     if vim.fn.argc() == 0 then
-      vim.defer_fn(function()
-        local has_tree = false
-        for _, win in ipairs(vim.api.nvim_list_wins()) do
-          local buf = vim.api.nvim_win_get_buf(win)
-          if vim.bo[buf].filetype == 'neo-tree' then
-            has_tree = true
-            break
-          end
-        end
-        
-        if not has_tree then
-          vim.cmd('Neotree reveal')
-        end
-      end, 200)
+      utils.ensure_neotree(200)
     end
   end,
   group = vim.api.nvim_create_augroup('Startup', { clear = true }),

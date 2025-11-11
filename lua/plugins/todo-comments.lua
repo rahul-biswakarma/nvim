@@ -1,11 +1,28 @@
+--[[
+  Todo Comments - Highlight & Search TODO Comments
+  
+  Highlights TODO, FIX, HACK, WARN, PERF, NOTE, and TEST comments.
+  Provides navigation and Telescope search for finding all todos in project.
+]]
+
 return {
   'folke/todo-comments.nvim',
   dependencies = { 'nvim-lua/plenary.nvim' },
   event = { 'BufReadPost', 'BufNewFile' },
   config = function()
+    local keys = require('core.keybindings-registry')
+    local kb = require('core.keybindings-registry')
+    
     require('todo-comments').setup {
-      signs = true,
-      sign_priority = 8,
+      -- ============================================================================
+      -- SIGN COLUMN
+      -- ============================================================================
+      signs = true,         -- Show icons in sign column
+      sign_priority = 8,    -- Priority for signs
+      
+      -- ============================================================================
+      -- KEYWORDS & ICONS
+      -- ============================================================================
       keywords = {
         FIX = {
           icon = ' ',
@@ -19,23 +36,36 @@ return {
         NOTE = { icon = ' ', color = 'hint', alt = { 'INFO' } },
         TEST = { icon = '⏲ ', color = 'test', alt = { 'TESTING', 'PASSED', 'FAILED' } },
       },
+      
+      merge_keywords = true,  -- Merge with default keywords
+      
+      -- ============================================================================
+      -- GUI STYLE
+      -- ============================================================================
       gui_style = {
-        fg = 'NONE',
-        bg = 'BOLD',
+        fg = 'NONE',   -- Use default foreground
+        bg = 'BOLD',   -- Bold background
       },
-      merge_keywords = true,
+      
+      -- ============================================================================
+      -- HIGHLIGHT SETTINGS
+      -- ============================================================================
       highlight = {
-        multiline = true,
-        multiline_pattern = '^.',
-        multiline_context = 10,
-        before = '',
-        keyword = 'wide',
-        after = 'fg',
-        pattern = [[.*<(KEYWORDS)\s*:]],
-        comments_only = true,
-        max_line_len = 400,
-        exclude = {},
+        multiline = true,              -- Enable multiline comments
+        multiline_pattern = '^.',      -- Pattern for continuation
+        multiline_context = 10,        -- Context lines for multiline
+        before = '',                   -- Highlight before keyword
+        keyword = 'wide',              -- Highlight style (wide, fg, bg)
+        after = 'fg',                  -- Highlight after keyword
+        pattern = [[.*<(KEYWORDS)\s*:]], -- Lua pattern to match keywords
+        comments_only = true,          -- Only highlight in comments
+        max_line_len = 400,            -- Max line length to highlight
+        exclude = {},                  -- Excluded filetypes
       },
+      
+      -- ============================================================================
+      -- COLORS
+      -- ============================================================================
       colors = {
         error = { 'DiagnosticError', 'ErrorMsg', '#DC2626' },
         warning = { 'DiagnosticWarn', 'WarningMsg', '#FBBF24' },
@@ -44,8 +74,12 @@ return {
         default = { 'Identifier', '#7C3AED' },
         test = { 'Identifier', '#FF00FF' },
       },
+      
+      -- ============================================================================
+      -- SEARCH CONFIGURATION
+      -- ============================================================================
       search = {
-        command = 'rg',
+        command = 'rg',  -- Use ripgrep
         args = {
           '--color=never',
           '--no-heading',
@@ -53,20 +87,21 @@ return {
           '--line-number',
           '--column',
         },
-        pattern = [[\b(KEYWORDS):]],
+        pattern = [[\b(KEYWORDS):]],  -- Ripgrep pattern
       },
     }
 
-    -- Keymaps
-    vim.keymap.set('n', ']t', function()
+    -- ============================================================================
+    -- KEYMAPS (Using centralized registry)
+    -- ============================================================================
+    kb.register_keymap('todo-comments', 'n', keys.next_todo, function()
       require('todo-comments').jump_next()
     end, { desc = 'Next todo comment' })
 
-    vim.keymap.set('n', '[t', function()
+    kb.register_keymap('todo-comments', 'n', keys.prev_todo, function()
       require('todo-comments').jump_prev()
     end, { desc = 'Previous todo comment' })
 
-    vim.keymap.set('n', '<leader>st', ':TodoTelescope<CR>', { desc = '[S]earch [T]odos' })
+    kb.register_keymap('todo-comments', 'n', keys.search_todos, ':TodoTelescope<CR>', { desc = 'Search todos' })
   end,
 }
-

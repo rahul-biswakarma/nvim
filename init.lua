@@ -20,4 +20,8 @@ vim.opt.rtp:prepend(lazypath)
 require('core.options')
 require('core.keymaps')
 require('core.autocmds')
+
+-- Load startup screen early (before lazy)
+require('ui.startup').config()
+
 require('lazy').setup('plugins')

@@ -1,10 +1,23 @@
+--[[
+  LSP Configuration
+  
+  Language Server Protocol configuration with smart goto-definition for Rust.
+  Includes Mason for automatic LSP server installation and management.
+  
+  Features:
+  - Smart Rust goto-definition (skips use statements, finds actual definitions)
+  - Rounded borders for popups
+  - Inlay hints support
+  - Comprehensive diagnostics
+]]
+
 return {
   'neovim/nvim-lspconfig',
   dependencies = {
     { 'williamboman/mason.nvim', config = true },
     'williamboman/mason-lspconfig.nvim',
     'WhoIsSethDaniel/mason-tool-installer.nvim',
-    {
+    { 
       'j-hui/fidget.nvim',
       tag = 'legacy',
       config = function()
@@ -27,15 +40,20 @@ return {
     'folke/neodev.nvim',
   },
   config = function()
+    local keys = require('core.keybindings-registry')
+    local kb = require('core.keybindings-registry')
+    
     -- ============================================================================
-    -- LSP Handlers Configuration
+    -- LSP HANDLERS CONFIGURATION
     -- ============================================================================
+    -- Rounded borders for hover and signature help
     vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(vim.lsp.handlers.hover, {
       border = 'rounded',
     })
     vim.lsp.handlers['textDocument/signatureHelp'] = vim.lsp.with(vim.lsp.handlers.signature_help, {
       border = 'rounded',
     })
+    
     -- Suppress warnings for unsupported TypeScript commands
     vim.lsp.handlers['workspace/executeCommand'] = function(err)
       if err and err.message and err.message:match('does not support command') then
@@ -56,7 +74,7 @@ return {
     end
 
     -- ============================================================================
-    -- Diagnostics Configuration
+    -- DIAGNOSTICS CONFIGURATION
     -- ============================================================================
     vim.diagnostic.config({
       float = {
@@ -81,7 +99,7 @@ return {
     })
 
     -- ============================================================================
-    -- Helper Functions
+    -- HELPER FUNCTIONS FOR SMART RUST GOTO-DEFINITION
     -- ============================================================================
     local function uri_to_bufnr(uri)
       local actual_uri = uri
@@ -104,18 +122,18 @@ return {
       end
       return false
     end
-
+      
     local function is_use_statement(uri, line)
       local bufnr = uri_to_bufnr(uri)
       if not vim.api.nvim_buf_is_valid(bufnr) then
         return false
       end
-
+        
       local lines = get_buffer_lines(bufnr, math.max(0, line - 2), line + 2)
       if not lines then
         return false
       end
-
+        
       local use_patterns = { '^%s*use%s+', '^%s*pub%s+use%s+', '^%s*mod%s+' }
       for _, line_content in ipairs(lines) do
         if is_rust_pattern(line_content:gsub('%s+', ' '), use_patterns) then
@@ -124,7 +142,7 @@ return {
       end
       return false
     end
-
+      
     local function is_definition(location)
       local uri = location.uri or location.filename
       if not uri then
@@ -135,7 +153,7 @@ return {
       if not vim.api.nvim_buf_is_valid(bufnr) then
         return false
       end
-
+        
       local line = (location.lnum or location.line or 0) - 1
       local lines = get_buffer_lines(bufnr, math.max(0, line - 5), line + 5)
       if not lines then
@@ -150,7 +168,7 @@ return {
         '^%s*pub%s+impl%s+', '^%s*impl%s+',
         '^%s*pub%s+trait%s+', '^%s*trait%s+',
       }
-
+        
       for _, line_content in ipairs(lines) do
         local content = line_content:gsub('%s+', ' ')
         if is_rust_pattern(content, use_patterns) then
@@ -204,7 +222,7 @@ return {
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         local offset_encoding = client and client.offset_encoding or 'utf-16'
         local locations = vim.lsp.util.locations_to_items(result, offset_encoding)
-
+          
         if not locations or #locations == 0 then
           return
         end
@@ -214,7 +232,7 @@ return {
         for _, location in ipairs(locations) do
           local uri = location.uri or location.filename
           local line = (location.lnum or location.line or 0) - 1
-
+            
           if is_use_statement(uri, line) then
             table.insert(use_locations, location)
           elseif is_definition(location) then
@@ -239,13 +257,22 @@ return {
       end)
     end
 
-
     -- ============================================================================
-    -- LSP on_attach Configuration
+    -- LSP ON_ATTACH CONFIGURATION (Buffer-local keymaps)
     -- ============================================================================
     local function on_attach(client, bufnr)
-      local nmap = function(keys, func, desc)
-        vim.keymap.set('n', keys, func, {
+      -- Helper to set buffer-local keymaps
+      local function nmap(lhs, rhs, desc)
+        kb.register_keymap('lsp', 'n', lhs, rhs, {
+          buffer = bufnr,
+          noremap = true,
+          silent = true,
+          desc = desc and 'LSP: ' .. desc or nil,
+        })
+      end
+      
+      local function vmap(lhs, rhs, desc)
+        kb.register_keymap('lsp', 'v', lhs, rhs, {
           buffer = bufnr,
           noremap = true,
           silent = true,
@@ -253,73 +280,79 @@ return {
         })
       end
 
-      -- Code actions
-      nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
-      nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
-      nmap('<leader>a', vim.lsp.buf.code_action, 'Code [A]ction')
-      vim.keymap.set({ 'v' }, '<leader>ca', vim.lsp.buf.code_action, {
-        buffer = bufnr,
-        noremap = true,
-        silent = true,
-        desc = 'LSP: [C]ode [A]ction',
-      })
-      vim.keymap.set({ 'v' }, '<leader>a', vim.lsp.buf.code_action, {
-        buffer = bufnr,
-        noremap = true,
-        silent = true,
-        desc = 'LSP: Code [A]ction',
-      })
+      -- ============================================================================
+      -- ACTIONS
+      -- ============================================================================
+      nmap(keys.lsp_rename, vim.lsp.buf.rename, 'Rename')
+      nmap(keys.lsp_code_action, vim.lsp.buf.code_action, 'Code Action')
+      nmap(keys.lsp_code_action_alt, vim.lsp.buf.code_action, 'Code Action (alt)')
+      vmap(keys.lsp_code_action, vim.lsp.buf.code_action, 'Code Action')
+      vmap(keys.lsp_code_action_alt, vim.lsp.buf.code_action, 'Code Action (alt)')
 
-      -- Navigation
-      nmap('gd', goto_definition_smart, '[G]oto [D]efinition')
-      nmap('<leader>gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinitions (Telescope)')
-      nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-      nmap('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
-      nmap('<leader>D', vim.lsp.buf.type_definition, 'Type [D]efinition')
-      nmap('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+      -- ============================================================================
+      -- NAVIGATION
+      -- ============================================================================
+      nmap(keys.lsp_goto_definition, goto_definition_smart, 'Goto Definition')
+      nmap(keys.lsp_goto_definitions_telescope, require('telescope.builtin').lsp_definitions, 'Goto Definitions (Telescope)')
+      nmap(keys.lsp_goto_references, require('telescope.builtin').lsp_references, 'Goto References')
+      nmap(keys.lsp_goto_implementation, require('telescope.builtin').lsp_implementations, 'Goto Implementation')
+      nmap(keys.lsp_type_definition, vim.lsp.buf.type_definition, 'Type Definition')
+      nmap(keys.lsp_goto_declaration, vim.lsp.buf.declaration, 'Goto Declaration')
 
-      -- Symbols
-      nmap('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-      nmap('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
+      -- ============================================================================
+      -- SYMBOLS
+      -- ============================================================================
+      nmap(keys.lsp_document_symbols, require('telescope.builtin').lsp_document_symbols, 'Document Symbols')
+      nmap(keys.lsp_workspace_symbols, require('telescope.builtin').lsp_dynamic_workspace_symbols, 'Workspace Symbols')
 
-      -- Documentation
-      nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
-      nmap('<C-k>', vim.lsp.buf.signature_help, 'Signature Documentation')
+      -- ============================================================================
+      -- DOCUMENTATION
+      -- ============================================================================
+      nmap(keys.lsp_hover, vim.lsp.buf.hover, 'Hover Documentation')
+      nmap(keys.lsp_signature_help, vim.lsp.buf.signature_help, 'Signature Documentation')
 
-      -- Workspace
-      nmap('<leader>wa', vim.lsp.buf.add_workspace_folder, '[W]orkspace [A]dd Folder')
-      nmap('<leader>wr', vim.lsp.buf.remove_workspace_folder, '[W]orkspace [R]emove Folder')
-      nmap('<leader>wl', function()
+      -- ============================================================================
+      -- WORKSPACE
+      -- ============================================================================
+      nmap(keys.lsp_workspace_add_folder, vim.lsp.buf.add_workspace_folder, 'Workspace Add Folder')
+      nmap(keys.lsp_workspace_remove_folder, vim.lsp.buf.remove_workspace_folder, 'Workspace Remove Folder')
+      nmap(keys.lsp_workspace_list_folders, function()
         print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-      end, '[W]orkspace [L]ist Folders')
-
-      -- Diagnostics
-      nmap('gl', function()
+      end, 'Workspace List Folders')
+      
+      -- ============================================================================
+      -- DIAGNOSTICS
+      -- ============================================================================
+      nmap(keys.lsp_diagnostics, function()
         vim.diagnostic.open_float(nil, { focus = false, scope = 'line' })
-      end, 'Show [L]ine diagnostics')
-      nmap('<leader>d', function()
+      end, 'Show Line Diagnostics')
+      nmap(keys.lsp_diagnostics_popup, function()
         vim.diagnostic.open_float()
-      end, 'Show [D]iagnostics popup')
-      nmap('[d', vim.diagnostic.goto_prev, 'Go to previous [d]iagnostic')
-      nmap(']d', vim.diagnostic.goto_next, 'Go to next [d]iagnostic')
-      nmap('<leader>q', vim.diagnostic.setloclist, 'Open diagnostics [q]uickfix list')
+      end, 'Show Diagnostics Popup')
+      nmap(keys.lsp_prev_diagnostic, vim.diagnostic.goto_prev, 'Previous Diagnostic')
+      nmap(keys.lsp_next_diagnostic, vim.diagnostic.goto_next, 'Next Diagnostic')
+      nmap(keys.lsp_quickfix, vim.diagnostic.setloclist, 'Diagnostics Quickfix List')
 
-      -- Inlay hints
+      -- ============================================================================
+      -- INLAY HINTS
+      -- ============================================================================
       if client.server_capabilities.inlayHintProvider then
         vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
-        nmap('<leader>th', function()
+        nmap(keys.lsp_toggle_inlay_hints, function()
           vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }), { bufnr = bufnr })
-        end, '[T]oggle Inlay [H]ints')
+        end, 'Toggle Inlay Hints')
       end
 
-      -- Format command
+      -- ============================================================================
+      -- FORMAT COMMAND
+      -- ============================================================================
       vim.api.nvim_buf_create_user_command(bufnr, 'Format', function()
         vim.lsp.buf.format()
       end, { desc = 'Format current buffer with LSP' })
     end
 
     -- ============================================================================
-    -- Server Configuration
+    -- SERVER CONFIGURATION
     -- ============================================================================
     local servers = {
       html = {},
@@ -336,7 +369,9 @@ return {
     local capabilities = vim.lsp.protocol.make_client_capabilities()
     capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
 
-    -- Setup servers via mason-lspconfig
+    -- ============================================================================
+    -- SETUP SERVERS VIA MASON
+    -- ============================================================================
     require('mason-lspconfig').setup({
       ensure_installed = vim.tbl_keys(servers),
       handlers = {
@@ -350,7 +385,9 @@ return {
       },
     })
 
-    -- Setup ts_ls separately
+    -- ============================================================================
+    -- SETUP TS_LS SEPARATELY
+    -- ============================================================================
     vim.lsp.config('ts_ls', {
       capabilities = capabilities,
       on_attach = on_attach,

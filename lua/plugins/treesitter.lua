@@ -1,29 +1,48 @@
+--[[
+  Treesitter - Advanced Syntax Parsing
+  
+  Provides incremental parsing for syntax highlighting, code navigation,
+  and intelligent text objects. Treesitter understands code structure
+  and enables powerful operations on functions, classes, and parameters.
+  
+  Features:
+  - Smart syntax highlighting (disables for large files >100KB)
+  - Text objects for functions, classes, and parameters
+  - Navigation between code elements
+  - Parameter swapping
+  - Integration with other plugins (autopairs, autotag, comment, etc.)
+]]
+
 return {
   'nvim-treesitter/nvim-treesitter',
   dependencies = {
     'nvim-treesitter/nvim-treesitter-textobjects',
   },
   build = ':TSUpdate',
+  event = 'VeryLazy', -- Only load when Neovim is mostly ready
   config = function()
+    local keys = require('core.keybindings-registry')
+    local kb = require('core.keybindings-registry') -- For registering keymaps
+    
     require('nvim-treesitter.configs').setup {
-      -- A list of parser names, or "all"
-      ensure_installed = { 'vim', 'vimdoc', 'query', 'lua', 'rust', 'javascript', 'typescript', 'tsx', 'css', 'html' },
-
-      -- Install parsers synchronously (only applied to `ensure_installed`)
-      sync_install = false,
-
-      -- Automatically install missing parsers when entering buffer
-      -- Recommendation: set to false if you don't have `tree-sitter` CLI installed locally
-      auto_install = true,
-
+      -- ============================================================================
+      -- PARSERS
+      -- ============================================================================
+      -- Languages to always install parsers for
+      ensure_installed = { 
+        'vim', 'vimdoc', 'query', 'lua', 
+        'rust', 'javascript', 'typescript', 'tsx', 
+        'css', 'html' 
+      },
+      sync_install = false, -- Install parsers asynchronously
+      auto_install = true, -- Automatically install missing parsers when entering buffer
+      
+      -- ============================================================================
+      -- HIGHLIGHTING
+      -- ============================================================================
       highlight = {
         enable = true,
-        -- NOTE: these are the names of the parsers and not the filetype. (for example if you want to
-        -- disable highlighting for the `tex` filetype, you need to include `latex` in this list as this is
-        -- the name of the parser)
-        -- list of language that will be disabled
-        -- disable = { 'c', 'rust' },
-        -- Or use a function for more flexibility, e.g. to disable slow treesitter highlight for large files
+        -- Disable for large files (performance optimization)
         disable = function(lang, buf)
           local max_filesize = 100 * 1024 -- 100 KB
           local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
@@ -31,58 +50,97 @@ return {
             return true
           end
         end,
-
-        -- Setting this to true will run `:h syntax` and tree-sitter at the same time.
-        -- Set this to `true` if you depend on 'syntax' being enabled (like for indentation).
-        -- Using this option may slow down your editor, and you may see some duplicate highlights.
-        -- Instead of true it can also be a list of languages
-        additional_vim_regex_highlighting = false,
+        additional_vim_regex_highlighting = false, -- Disable default vim syntax (Treesitter is better)
       },
-      indent = { enable = true, disable = { 'yaml' } },
+      
+      -- ============================================================================
+      -- INDENTATION
+      -- ============================================================================
+      indent = { 
+        enable = true, 
+        disable = { 'yaml' } -- YAML indentation is better handled by filetype plugins
+      },
+      
+      -- ============================================================================
+      -- TEXT OBJECTS
+      -- ============================================================================
       textobjects = {
+        -- Text object selection (e.g., "daf" deletes a function)
         select = {
           enable = true,
-          lookahead = true, -- Automatically jump forward to textobj, similar to targets.vim
+          lookahead = true, -- Automatically jump forward to textobj
           keymaps = {
-            -- You can use the capture groups defined in textobjects.scm
-            ['aa'] = '@parameter.outer',
-            ['ia'] = '@parameter.inner',
-            ['af'] = '@function.outer',
-            ['if'] = '@function.inner',
-            ['ac'] = '@class.outer',
-            ['ic'] = '@class.inner',
+            -- All keymaps reference the centralized registry
+            [keys.textobj_param_outer] = '@parameter.outer', -- aa: around parameter
+            [keys.textobj_param_inner] = '@parameter.inner', -- ia: inside parameter
+            [keys.textobj_function_outer] = '@function.outer', -- af: around function
+            [keys.textobj_function_inner] = '@function.inner', -- if: inside function
+            [keys.textobj_class_outer] = '@class.outer', -- ac: around class
+            [keys.textobj_class_inner] = '@class.inner', -- ic: inside class
           },
         },
+        
+        -- Navigation between code elements
         move = {
           enable = true,
-          set_jumps = true, -- whether to set jumps in the jumplist
+          set_jumps = true, -- Add jumps to jumplist
           goto_next_start = {
-            [']m'] = '@function.outer',
-            [']]'] = '@class.outer',
+            [keys.goto_next_function_start] = '@function.outer', -- ]m: next function start
+            [keys.goto_next_class_start] = '@class.outer', -- ]]: next class start
           },
           goto_next_end = {
-            [']M'] = '@function.outer',
-            [']['] = '@class.outer',
+            [keys.goto_next_function_end] = '@function.outer', -- ]M: next function end
+            [keys.goto_next_class_end] = '@class.outer', -- ][: next class end
           },
           goto_previous_start = {
-            ['[m'] = '@function.outer',
-            ['[['] = '@class.outer',
+            [keys.goto_prev_function_start] = '@function.outer', -- [m: prev function start
+            [keys.goto_prev_class_start] = '@class.outer', -- [[: prev class start
           },
           goto_previous_end = {
-            ['[M'] = '@function.outer',
-            ['[]'] = '@class.outer',
+            [keys.goto_prev_function_end] = '@function.outer', -- [M: prev function end
+            [keys.goto_prev_class_end] = '@class.outer', -- []: prev class end
           },
         },
+        
+        -- Swap parameters/arguments
         swap = {
           enable = true,
           swap_next = {
-            ['<leader>a'] = '@parameter.inner',
+            [keys.swap_param_next] = '@parameter.inner', -- <leader>sa: swap with next parameter
           },
           swap_previous = {
-            ['<leader>A'] = '@parameter.inner',
+            [keys.swap_param_prev] = '@parameter.inner', -- <leader>sA: swap with previous parameter
           },
         },
       },
     }
+    
+    -- ============================================================================
+    -- REGISTER KEYMAPS (for documentation/conflict detection)
+    -- ============================================================================
+    -- These keymaps are defined in Treesitter's config table above
+    kb.register_keymaps('treesitter', {
+      -- Text object selection
+      { 'o', keys.textobj_param_outer, 'treesitter', { desc = 'Around parameter' } },
+      { 'o', keys.textobj_param_inner, 'treesitter', { desc = 'Inside parameter' } },
+      { 'o', keys.textobj_function_outer, 'treesitter', { desc = 'Around function' } },
+      { 'o', keys.textobj_function_inner, 'treesitter', { desc = 'Inside function' } },
+      { 'o', keys.textobj_class_outer, 'treesitter', { desc = 'Around class' } },
+      { 'o', keys.textobj_class_inner, 'treesitter', { desc = 'Inside class' } },
+      
+      -- Movement
+      { 'n', keys.goto_next_function_start, 'treesitter', { desc = 'Next function start' } },
+      { 'n', keys.goto_next_class_start, 'treesitter', { desc = 'Next class start' } },
+      { 'n', keys.goto_next_function_end, 'treesitter', { desc = 'Next function end' } },
+      { 'n', keys.goto_next_class_end, 'treesitter', { desc = 'Next class end' } },
+      { 'n', keys.goto_prev_function_start, 'treesitter', { desc = 'Prev function start' } },
+      { 'n', keys.goto_prev_class_start, 'treesitter', { desc = 'Prev class start' } },
+      { 'n', keys.goto_prev_function_end, 'treesitter', { desc = 'Prev function end' } },
+      { 'n', keys.goto_prev_class_end, 'treesitter', { desc = 'Prev class end' } },
+      
+      -- Swap
+      { 'n', keys.swap_param_next, 'treesitter', { desc = 'Swap with next parameter' } },
+      { 'n', keys.swap_param_prev, 'treesitter', { desc = 'Swap with previous parameter' } },
+    })
   end,
 }

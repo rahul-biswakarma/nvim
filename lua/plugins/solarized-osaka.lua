@@ -1,26 +1,48 @@
+--[[
+  Solarized Osaka - Colorscheme
+  
+  Modern variant of the classic Solarized theme with enhanced colors.
+  Features italics for comments and keywords, customizable transparency.
+]]
+
 return {
   'craftzdog/solarized-osaka.nvim',
-  lazy = false,
-  priority = 1000,
+  lazy = false,    -- Load immediately
+  priority = 1000, -- Load before other plugins
   config = function()
     require('solarized-osaka').setup {
-      transparent = false,
-      terminal_colors = true,
+      -- ============================================================================
+      -- APPEARANCE
+      -- ============================================================================
+      transparent = false,     -- Disable background transparency
+      terminal_colors = true,  -- Configure terminal colors
+      
+      -- ============================================================================
+      -- STYLE SETTINGS
+      -- ============================================================================
       styles = {
-        comments = { italic = true },
-        keywords = { italic = true },
-        functions = {},
-        variables = {},
-        sidebars = 'dark',
-        floats = 'dark',
+        comments = { italic = true },   -- Italic comments
+        keywords = { italic = true },   -- Italic keywords
+        functions = {},                 -- Default function style
+        variables = {},                 -- Default variable style
+        sidebars = 'dark',              -- Dark sidebars
+        floats = 'dark',                -- Dark floating windows
       },
-      sidebars = { 'qf', 'help', 'NvimTree' },
-      hide_inactive_statusline = false,
-      dim_inactive = false,
-      lualine_bold = true,
+      
+      -- ============================================================================
+      -- SIDEBAR CONFIGURATION
+      -- ============================================================================
+      sidebars = { 'qf', 'help', 'NvimTree' },  -- Windows to apply sidebar style
+      
+      -- ============================================================================
+      -- STATUSLINE
+      -- ============================================================================
+      hide_inactive_statusline = false,  -- Keep statusline on inactive windows
+      dim_inactive = false,              -- Don't dim inactive windows
+      lualine_bold = true,               -- Bold lualine mode indicator
     }
+    
     -- Load the colorscheme
-    vim.cmd.colorscheme 'solarized-osaka'
+    vim.cmd.colorscheme('solarized-osaka')
   end,
 }
-

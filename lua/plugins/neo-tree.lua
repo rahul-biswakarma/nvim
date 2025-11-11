@@ -1,3 +1,16 @@
+--[[
+  Neo-tree - File Explorer
+  
+  Modern file explorer with git integration, file manipulation,
+  and buffer/git status views.
+  
+  Features:
+  - Git status indicators
+  - LSP diagnostics integration
+  - File operations (create, delete, rename, copy, move)
+  - Multiple views (filesystem, buffers, git status)
+]]
+
 return {
   'nvim-neo-tree/neo-tree.nvim',
   branch = 'v3.x',
@@ -7,14 +20,20 @@ return {
     'MunifTanjim/nui.nvim',
   },
   cmd = 'Neotree',
-  keys = {
-    { '<leader>e', ':Neotree toggle<CR>', desc = 'Toggle file explorer', silent = true },
-    { '<leader>fe', ':Neotree reveal<CR>', desc = 'Reveal file in explorer', silent = true },
-    { '<leader>fg', ':Neotree float git_status<CR>', desc = 'Git status', silent = true },
-    { '<leader>fb', ':Neotree float buffers<CR>', desc = 'Buffers', silent = true },
-  },
+  keys = function()
+    local keys = require('core.keybindings-registry')
+    return {
+      { keys.toggle_file_tree, ':Neotree toggle<CR>', desc = 'Toggle file explorer', silent = true },
+      { keys.reveal_in_tree, ':Neotree reveal<CR>', desc = 'Reveal file in explorer', silent = true },
+      { keys.git_status, ':Neotree float git_status<CR>', desc = 'Git status', silent = true },
+      { keys.buffers_view, ':Neotree float buffers<CR>', desc = 'Buffers', silent = true },
+    }
+  end,
   config = function()
     require('neo-tree').setup({
+      -- ============================================================================
+      -- GENERAL SETTINGS
+      -- ============================================================================
       close_if_last_window = true,
       popup_border_style = 'rounded',
       enable_git_status = true,
@@ -22,10 +41,16 @@ return {
       open_files_do_not_replace_types = { 'terminal', 'trouble', 'qf' },
       sort_case_insensitive = false,
       sort_function = nil,
+      
+      -- ============================================================================
+      -- DEFAULT COMPONENT CONFIGS
+      -- ============================================================================
       default_component_configs = {
         container = {
           enable_character_fade = true,
         },
+        
+        -- Indentation markers
         indent = {
           indent_size = 2,
           padding = 1,
@@ -38,6 +63,8 @@ return {
           expander_expanded = '',
           expander_highlight = 'NeoTreeExpander',
         },
+        
+        -- File/folder icons
         icon = {
           folder_closed = '',
           folder_open = '',
@@ -45,15 +72,21 @@ return {
           default = '*',
           highlight = 'NeoTreeFileIcon',
         },
+        
+        -- Modified indicator
         modified = {
           symbol = '[+]',
           highlight = 'NeoTreeModified',
         },
+        
+        -- Filename
         name = {
           trailing_slash = false,
           use_git_status_colors = true,
           highlight = 'NeoTreeFileName',
         },
+        
+        -- Git status symbols
         git_status = {
           symbols = {
             added     = '',
@@ -67,6 +100,8 @@ return {
             conflict  = '',
           },
         },
+        
+        -- File metadata
         file_size = {
           enabled = true,
           required_width = 64,
@@ -87,7 +122,12 @@ return {
           enabled = false,
         },
       },
+      
       commands = {},
+      
+      -- ============================================================================
+      -- WINDOW CONFIGURATION
+      -- ============================================================================
       window = {
         position = 'left',
         width = 35,
@@ -99,11 +139,10 @@ return {
           noremap = true,
           nowait = true,
         },
+        
+        -- Keymaps (internal to neo-tree window)
         mappings = {
-          ['<space>'] = {
-            'toggle_node',
-            nowait = false,
-          },
+          ['<space>'] = { 'toggle_node', nowait = false },
           ['<2-LeftMouse>'] = 'open',
           ['<cr>'] = 'open',
           ['<esc>'] = 'cancel',
@@ -115,12 +154,7 @@ return {
           ['w'] = 'open_with_window_picker',
           ['C'] = 'close_node',
           ['z'] = 'close_all_nodes',
-          ['a'] = {
-            'add',
-            config = {
-              show_path = 'none',
-            },
-          },
+          ['a'] = { 'add', config = { show_path = 'none' } },
           ['A'] = 'add_directory',
           ['d'] = 'delete',
           ['r'] = 'rename',
@@ -137,8 +171,14 @@ return {
           ['i'] = 'show_file_details',
         },
       },
+      
       nesting_rules = {},
+      
+      -- ============================================================================
+      -- FILESYSTEM VIEW
+      -- ============================================================================
       filesystem = {
+        -- Filtered items settings
         filtered_items = {
           visible = false,
           hide_dotfiles = false,
@@ -150,13 +190,18 @@ return {
           never_show = {},
           never_show_by_pattern = {},
         },
+        
+        -- Follow current file
         follow_current_file = {
           enabled = true,
           leave_dirs_open = false,
         },
+        
         group_empty_dirs = false,
         hijack_netrw_behavior = 'open_default',
         use_libuv_file_watcher = true,
+        
+        -- Filesystem-specific window mappings
         window = {
           mappings = {
             ['<bs>'] = 'navigate_up',
@@ -187,6 +232,10 @@ return {
         },
         commands = {},
       },
+      
+      -- ============================================================================
+      -- BUFFERS VIEW
+      -- ============================================================================
       buffers = {
         follow_current_file = {
           enabled = true,
@@ -194,6 +243,7 @@ return {
         },
         group_empty_dirs = true,
         show_unloaded = true,
+        
         window = {
           mappings = {
             ['bd'] = 'buffer_delete',
@@ -209,6 +259,10 @@ return {
           },
         },
       },
+      
+      -- ============================================================================
+      -- GIT STATUS VIEW
+      -- ============================================================================
       git_status = {
         window = {
           position = 'float',
@@ -232,6 +286,10 @@ return {
       },
     })
 
+    -- ============================================================================
+    -- AUTO-OPEN ON DIRECTORY
+    -- ============================================================================
+    -- Open Neo-tree when opening a directory
     vim.api.nvim_create_autocmd('BufEnter', {
       group = vim.api.nvim_create_augroup('NeoTreeInit', { clear = true }),
       callback = function()

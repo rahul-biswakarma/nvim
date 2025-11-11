@@ -1,7 +1,23 @@
+--[[
+  Lualine - Status Line
+  
+  Beautiful and fast statusline with custom components.
+  
+  Custom components:
+  - LSP client names
+  - LSP progress (from fidget)
+  - Treesitter status
+  - System stats (CPU & RAM usage)
+]]
+
 return {
   'nvim-lualine/lualine.nvim',
   dependencies = { 'nvim-tree/nvim-web-devicons' },
+  event = 'VeryLazy',
   config = function()
+    -- ============================================================================
+    -- CUSTOM COMPONENT: LSP CLIENT NAMES
+    -- ============================================================================
     local function lsp_client()
       local buf_clients = vim.lsp.get_clients({ bufnr = 0 })
       if #buf_clients == 0 then
@@ -17,6 +33,9 @@ return {
       return string.format('[%s]', unique_client_names)
     end
 
+    -- ============================================================================
+    -- CUSTOM COMPONENT: LSP PROGRESS
+    -- ============================================================================
     local function lsp_progress()
       local ok, fidget = pcall(require, 'fidget')
       if not ok then
@@ -49,6 +68,9 @@ return {
       return ''
     end
 
+    -- ============================================================================
+    -- CUSTOM COMPONENT: TREESITTER STATUS
+    -- ============================================================================
     local function treesitter_status()
       local bufnr = vim.api.nvim_get_current_buf()
       local lang = vim.treesitter.get_lang(bufnr)
@@ -58,12 +80,17 @@ return {
       return ''
     end
 
+    -- ============================================================================
+    -- CUSTOM COMPONENT: SYSTEM STATS (CPU & RAM)
+    -- ============================================================================
     local system_stats_cache = { cpu = '0', mem = '0.0', last_update = 0 }
     
     local function update_system_stats()
+      -- macOS-specific commands
       local cpu_cmd = "ps -A -o %cpu | awk '{s+=$1} END {printf \"%.0f\", s}'"
       local mem_cmd = "vm_stat | perl -ne '/page size of (\\d+)/ and $size=$1; /Pages\\s+([^:]+)[^\\d]+(\\d+)/ and $mem{$1}=$2*$size/1073741824; END {printf \"%.1f\", ($mem{\"wired\"}+$mem{\"active\"}+$mem{\"inactive\"}+$mem{\"speculative\"})}'"
       
+      -- Update CPU
       local cpu_handle = io.popen(cpu_cmd)
       if cpu_handle then
         local cpu = cpu_handle:read('*a'):gsub('%s+', '')
@@ -73,6 +100,7 @@ return {
         end
       end
       
+      -- Update Memory
       local mem_handle = io.popen(mem_cmd)
       if mem_handle then
         local mem = mem_handle:read('*a'):gsub('%s+', '')
@@ -87,6 +115,7 @@ return {
     
     local function system_stats()
       local now = vim.loop.now()
+      -- Update every 2 seconds
       if now - system_stats_cache.last_update > 2000 then
         update_system_stats()
       end
@@ -96,10 +125,18 @@ return {
       return string.format('CPU:%s%% RAM:%sGB', cpu, mem)
     end
     
+    -- Initial update
     update_system_stats()
+    -- Update every 2 seconds in background
     vim.loop.new_timer():start(2000, 2000, vim.schedule_wrap(update_system_stats))
 
+    -- ============================================================================
+    -- LUALINE SETUP
+    -- ============================================================================
     require('lualine').setup {
+      -- ============================================================================
+      -- OPTIONS
+      -- ============================================================================
       options = {
         icons_enabled = true,
         theme = 'solarized-osaka',
@@ -111,15 +148,22 @@ return {
         },
         ignore_focus = {},
         always_divide_middle = true,
-        globalstatus = true,
+        globalstatus = true,  -- Single statusline for all windows
         refresh = {
           statusline = 200,
           tabline = 1000,
           winbar = 1000,
         },
       },
+      
+      -- ============================================================================
+      -- ACTIVE SECTIONS
+      -- ============================================================================
       sections = {
+        -- Left section
         lualine_a = { 'mode' },
+        
+        -- Left-center section (git & diagnostics)
         lualine_b = { 
           'branch',
           'diff',
@@ -133,12 +177,14 @@ return {
             always_visible = false,
           },
         },
+        
+        -- Center section (filename)
         lualine_c = {
           {
             'filename',
             file_status = true,
             newfile_status = true,
-            path = 1,
+            path = 1,  -- Relative path
             shorting_target = 40,
             symbols = {
               modified = '[+]',
@@ -148,6 +194,8 @@ return {
             },
           },
         },
+        
+        -- Right-center section (LSP & file info)
         lualine_x = {
           {
             lsp_progress,
@@ -175,6 +223,8 @@ return {
           },
           'filetype',
         },
+        
+        -- Right section (system stats & position)
         lualine_y = { 
           {
             system_stats,
@@ -183,8 +233,13 @@ return {
           },
           'progress',
         },
+        
         lualine_z = { 'location' },
       },
+      
+      -- ============================================================================
+      -- INACTIVE SECTIONS (Minimal for unfocused windows)
+      -- ============================================================================
       inactive_sections = {
         lualine_a = {},
         lualine_b = {},
@@ -193,6 +248,10 @@ return {
         lualine_y = {},
         lualine_z = {},
       },
+      
+      -- ============================================================================
+      -- EXTENSIONS
+      -- ============================================================================
       tabline = {},
       extensions = { 'neo-tree', 'toggleterm', 'trouble' },
     }
