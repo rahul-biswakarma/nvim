@@ -123,42 +123,42 @@ return {
       return false
     end
       
-    local function is_use_statement(uri, line)
+      local function is_use_statement(uri, line)
       local bufnr = uri_to_bufnr(uri)
-      if not vim.api.nvim_buf_is_valid(bufnr) then
-        return false
-      end
+        if not vim.api.nvim_buf_is_valid(bufnr) then
+          return false
+        end
         
       local lines = get_buffer_lines(bufnr, math.max(0, line - 2), line + 2)
       if not lines then
-        return false
-      end
+          return false
+        end
         
       local use_patterns = { '^%s*use%s+', '^%s*pub%s+use%s+', '^%s*mod%s+' }
-      for _, line_content in ipairs(lines) do
+        for _, line_content in ipairs(lines) do
         if is_rust_pattern(line_content:gsub('%s+', ' '), use_patterns) then
-          return true
+            return true
+          end
         end
+        return false
       end
-      return false
-    end
       
-    local function is_definition(location)
-      local uri = location.uri or location.filename
+      local function is_definition(location)
+        local uri = location.uri or location.filename
       if not uri then
         return false
       end
 
       local bufnr = uri_to_bufnr(uri)
-      if not vim.api.nvim_buf_is_valid(bufnr) then
-        return false
-      end
+        if not vim.api.nvim_buf_is_valid(bufnr) then
+          return false
+        end
         
-      local line = (location.lnum or location.line or 0) - 1
+        local line = (location.lnum or location.line or 0) - 1
       local lines = get_buffer_lines(bufnr, math.max(0, line - 5), line + 5)
       if not lines then
-        return false
-      end
+          return false
+        end
 
       local use_patterns = { '^%s*use%s+', '^%s*pub%s+use%s+', '^%s*mod%s+' }
       local def_patterns = {
@@ -169,15 +169,15 @@ return {
         '^%s*pub%s+trait%s+', '^%s*trait%s+',
       }
         
-      for _, line_content in ipairs(lines) do
-        local content = line_content:gsub('%s+', ' ')
+        for _, line_content in ipairs(lines) do
+          local content = line_content:gsub('%s+', ' ')
         if is_rust_pattern(content, use_patterns) then
-          return false
-        end
+            return false
+          end
         if is_rust_pattern(content, def_patterns) then
-          return true
+            return true
+          end
         end
-      end
       return false
     end
 
@@ -201,61 +201,61 @@ return {
       local col = (location.col or location.character or 0)
       vim.api.nvim_win_set_cursor(0, { line + 1, col })
       vim.cmd('normal! zz')
-    end
+      end
 
-    local function goto_definition_smart()
-      local clients = vim.lsp.get_clients({ bufnr = 0 })
-      local offset_encoding = clients[1] and clients[1].offset_encoding or 'utf-16'
-      local params = vim.lsp.util.make_position_params(0, offset_encoding)
+      local function goto_definition_smart()
+        local clients = vim.lsp.get_clients({ bufnr = 0 })
+        local offset_encoding = clients[1] and clients[1].offset_encoding or 'utf-16'
+        local params = vim.lsp.util.make_position_params(0, offset_encoding)
 
-      vim.lsp.buf_request(0, 'textDocument/definition', params, function(err, result, ctx)
-        if err then
-          vim.notify('Error finding definition: ' .. tostring(err), vim.log.levels.ERROR)
-          return
-        end
+        vim.lsp.buf_request(0, 'textDocument/definition', params, function(err, result, ctx)
+          if err then
+            vim.notify('Error finding definition: ' .. tostring(err), vim.log.levels.ERROR)
+            return
+          end
 
-        if not result or vim.tbl_isempty(result) then
-          vim.notify('No definition found', vim.log.levels.INFO)
-          return
-        end
+          if not result or vim.tbl_isempty(result) then
+            vim.notify('No definition found', vim.log.levels.INFO)
+            return
+          end
 
-        local client = vim.lsp.get_client_by_id(ctx.client_id)
-        local offset_encoding = client and client.offset_encoding or 'utf-16'
+          local client = vim.lsp.get_client_by_id(ctx.client_id)
+          local offset_encoding = client and client.offset_encoding or 'utf-16'
         local locations = vim.lsp.util.locations_to_items(result, offset_encoding)
           
-        if not locations or #locations == 0 then
-          return
-        end
+          if not locations or #locations == 0 then
+            return
+          end
 
         local preferred_location, use_locations, other_locations = nil, {}, {}
 
-        for _, location in ipairs(locations) do
-          local uri = location.uri or location.filename
-          local line = (location.lnum or location.line or 0) - 1
+          for _, location in ipairs(locations) do
+            local uri = location.uri or location.filename
+            local line = (location.lnum or location.line or 0) - 1
             
-          if is_use_statement(uri, line) then
-            table.insert(use_locations, location)
-          elseif is_definition(location) then
-            preferred_location = location
-            break
-          else
-            table.insert(other_locations, location)
+            if is_use_statement(uri, line) then
+              table.insert(use_locations, location)
+            elseif is_definition(location) then
+              preferred_location = location
+              break
+            else
+              table.insert(other_locations, location)
+            end
           end
-        end
 
-        if preferred_location then
+          if preferred_location then
           jump_to_location(preferred_location)
-        elseif #other_locations > 0 then
+          elseif #other_locations > 0 then
           jump_to_location(other_locations[1])
         elseif #use_locations == 1 then
           jump_to_location(use_locations[1])
         elseif #use_locations > 1 then
-          require('telescope.builtin').lsp_definitions()
-        else
+              require('telescope.builtin').lsp_definitions()
+          else
           jump_to_location(locations[1])
-        end
-      end)
-    end
+          end
+        end)
+      end
 
     -- ============================================================================
     -- LSP ON_ATTACH CONFIGURATION (Buffer-local keymaps)
@@ -270,14 +270,14 @@ return {
           desc = desc and 'LSP: ' .. desc or nil,
         })
       end
-      
+
       local function vmap(lhs, rhs, desc)
         kb.register_keymap('lsp', 'v', lhs, rhs, {
-          buffer = bufnr,
-          noremap = true,
-          silent = true,
+        buffer = bufnr,
+        noremap = true,
+        silent = true,
           desc = desc and 'LSP: ' .. desc or nil,
-        })
+      })
       end
 
       -- ============================================================================
@@ -375,13 +375,13 @@ return {
     require('mason-lspconfig').setup({
       ensure_installed = vim.tbl_keys(servers),
       handlers = {
-        function(server_name)
+      function(server_name)
           require('lspconfig')[server_name].setup({
-            capabilities = capabilities,
-            on_attach = on_attach,
+          capabilities = capabilities,
+          on_attach = on_attach,
             settings = servers[server_name] or {},
           })
-        end,
+      end,
       },
     })
 

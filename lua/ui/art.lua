@@ -853,5 +853,4 @@ local header = {
     },
 }
 return header
--- dashboard.section.header = header
 

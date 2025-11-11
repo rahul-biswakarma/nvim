@@ -16,7 +16,7 @@ return {
   },
   config = function()
     local keys = require('core.keybindings-registry')
-    
+
     require('telescope').setup {
       defaults = {
         mappings = {
@@ -62,7 +62,7 @@ return {
         previewer = false,
       })
     end, { desc = 'Search Buffer' })
-    
+
     -- Search in open files
     vim.keymap.set('n', keys.search_open_files, function()
       builtin.live_grep {

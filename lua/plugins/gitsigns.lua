@@ -78,14 +78,14 @@ return {
       -- ============================================================================
       on_attach = function(bufnr)
         local gs = package.loaded.gitsigns
-        
+
         -- Helper to set buffer-local keymaps
         local function map(mode, lhs, rhs, opts)
           opts = opts or {}
           opts.buffer = bufnr
           kb.register_keymap('gitsigns', mode, lhs, rhs, opts)
         end
-        
+
         -- ============================================================================
         -- NAVIGATION
         -- ============================================================================
@@ -99,7 +99,7 @@ return {
           end)
           return '<Ignore>'
         end, { expr = true, desc = 'Next git hunk' })
-        
+
         -- Previous hunk
         map('n', keys.git_prev_hunk, function()
           if vim.wo.diff then
@@ -110,7 +110,7 @@ return {
           end)
           return '<Ignore>'
         end, { expr = true, desc = 'Previous git hunk' })
-        
+
         -- ============================================================================
         -- STAGING & RESET
         -- ============================================================================
@@ -143,7 +143,7 @@ return {
           gs.diffthis('~')
         end, { desc = 'Diff this (cached)' })
         map('n', keys.git_toggle_deleted, gs.toggle_deleted, { desc = 'Toggle deleted' })
-        
+
         -- ============================================================================
         -- TEXT OBJECTS
         -- ============================================================================

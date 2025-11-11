@@ -79,10 +79,10 @@ return {
   { 
     'nvim-telescope/telescope.nvim',  -- Fuzzy finder
     dependencies = {
-      'nvim-lua/plenary.nvim',
+    'nvim-lua/plenary.nvim',
       { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },  -- FZF sorter
       { 'nvim-telescope/telescope-ui-select.nvim' },                    -- UI select override
-      { 'nvim-tree/nvim-web-devicons' },
+    { 'nvim-tree/nvim-web-devicons' },
     },
   },
   { 'phaazon/hop.nvim', branch = 'v2' },  -- Fast navigation
@@ -94,15 +94,15 @@ return {
   { 
     'kdheepak/lazygit.nvim',  -- LazyGit TUI
     cmd = {
-      'LazyGit',
-      'LazyGitConfig',
-      'LazyGitCurrentFile',
-      'LazyGitFilter',
-      'LazyGitFilterCurrentFile',
+    'LazyGit',
+    'LazyGitConfig',
+    'LazyGitCurrentFile',
+    'LazyGitFilter',
+    'LazyGitFilterCurrentFile',
     }, 
     dependencies = { 'nvim-lua/plenary.nvim' },
   },
-  
+
   -- ============================================================================
   -- RUST-SPECIFIC TOOLS
   -- ============================================================================

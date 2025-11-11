@@ -89,11 +89,21 @@ end
 
 -- Handle window resize
 function M.handle_resize(pin_handler)
-  if startup_buf and vim.api.nvim_buf_is_valid(startup_buf) then
-    local current_buf = vim.api.nvim_get_current_buf()
-    if current_buf == startup_buf then
+  if startup_win and vim.api.nvim_win_is_valid(startup_win) then
+    local ui = vim.api.nvim_list_uis()[1]
+    local win_width = ui.width
+    local win_height = ui.height
+    
+    -- Update window size to full screen
+    vim.api.nvim_win_set_config(startup_win, {
+      width = win_width,
+      height = win_height,
+      row = 0,
+      col = 0,
+    })
+    
+    -- Update buffer content
       M.update_buffer(pin_handler)
-    end
   end
 end
 
@@ -155,6 +165,7 @@ local function unlock_and_restore()
   vim.opt.cmdheight = 1
   vim.opt.showmode = true
   
+  -- Close startup window first
   if startup_win and vim.api.nvim_win_is_valid(startup_win) then
     vim.api.nvim_win_close(startup_win, true)
   end
@@ -166,13 +177,18 @@ local function unlock_and_restore()
   startup_buf = nil
   startup_win = nil
   
-  -- Restore session and open file tree
+  -- Signal that startup is unlocked (for buddy chat)
+  vim.g.startup_unlocked = true
+  
+  -- Wait a bit for windows to fully close, then restore session
   vim.defer_fn(function()
+    -- Restore session
     local ok, auto_session = pcall(require, 'auto-session')
     if ok then
       auto_session.RestoreSession()
     end
     
+    -- Wait for session restore to complete, then open file tree
     vim.defer_fn(function()
       local has_tree = false
       for _, win in ipairs(vim.api.nvim_list_wins()) do
@@ -186,8 +202,14 @@ local function unlock_and_restore()
       if not has_tree then
         vim.cmd('Neotree reveal')
       end
+      
+      -- Signal buddy chat to initialize after session restore
+      vim.defer_fn(function()
+        vim.g.session_restored = true
+        vim.api.nvim_exec_autocmds('User', { pattern = 'StartupUnlocked' })
+      end, 200)
     end, 500)
-  end, 100)
+  end, 200)
 end
 
 -- Show the startup screen
@@ -211,20 +233,28 @@ function M.show_startup_screen(pin_handler)
   
   startup_buf = create_startup_buffer(pin_handler, unlock_and_restore)
   
+  -- Full-screen floating window (like lazygit)
+  local ui = vim.api.nvim_list_uis()[1]
+  local win_width = ui.width
+  local win_height = ui.height
+  
   startup_win = vim.api.nvim_open_win(startup_buf, true, {
     relative = 'editor',
-    width = vim.o.columns,
-    height = vim.o.lines,
+    width = win_width,
+    height = win_height,
     col = 0,
     row = 0,
     style = 'minimal',
-    border = 'none',
+    border = 'rounded',
+    focusable = true,
+    zindex = 100,  -- High zindex to stay on top
   })
   
   vim.api.nvim_win_set_option(startup_win, 'number', false)
   vim.api.nvim_win_set_option(startup_win, 'relativenumber', false)
   vim.api.nvim_win_set_option(startup_win, 'cursorline', false)
   vim.api.nvim_win_set_option(startup_win, 'signcolumn', 'no')
+  vim.api.nvim_win_set_option(startup_win, 'wrap', true)
   
   vim.api.nvim_set_current_win(startup_win)
   

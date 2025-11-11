@@ -53,8 +53,8 @@ Space + hj          Hop to pattern
 Navigation:
   gd                  Go to definition (smart)
   Space + gd          Go to definitions (Telescope)
-  gr                  Go to references
-  gI                  Go to implementation
+gr                  Go to references
+gI                  Go to implementation
   gD                  Go to declaration
   Space + D           Type definition
   ]], [[              Next/Previous reference (illuminate)
@@ -64,13 +64,13 @@ Symbols:
   Space + ls          Workspace symbols
 
 Documentation:
-  K                   Hover documentation
-  Ctrl+k              Signature help
+K                   Hover documentation
+Ctrl+k              Signature help
 
 Actions:
-  Space + ca          Code actions
+Space + ca          Code actions
   Space + a           Code actions (alternative)
-  Space + rn          Rename symbol
+Space + rn          Rename symbol
 
 Diagnostics:
   gl                  Show line diagnostics

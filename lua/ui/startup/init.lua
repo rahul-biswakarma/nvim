@@ -44,6 +44,27 @@ M.config = function()
     group = vim.api.nvim_create_augroup('StartupScreenLock', { clear = true }),
   })
   
+  -- Prevent switching away from startup screen
+  vim.api.nvim_create_autocmd('WinEnter', {
+    callback = function()
+      if not pin_handler.is_unlocked() and vim.fn.argc() == 0 then
+        local win = ui.get_startup_win()
+        if win and vim.api.nvim_win_is_valid(win) then
+          local current_win = vim.api.nvim_get_current_win()
+          if current_win ~= win then
+            -- Check if we're trying to switch to a non-startup buffer
+            local buf = vim.api.nvim_win_get_buf(current_win)
+            local bufname = vim.api.nvim_buf_get_name(buf)
+            if bufname ~= 'startup-screen' and bufname ~= '' then
+              vim.api.nvim_set_current_win(win)
+            end
+          end
+        end
+      end
+    end,
+    group = vim.api.nvim_create_augroup('StartupScreenLock', { clear = false }),
+  })
+  
   -- Handle resize events
   vim.api.nvim_create_autocmd('VimResized', {
     callback = function()

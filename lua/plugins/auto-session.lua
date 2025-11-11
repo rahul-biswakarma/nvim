@@ -16,10 +16,23 @@ return {
       auto_session_root_dir = vim.fn.stdpath('data') .. '/sessions/',
       auto_session_enabled = true,
       auto_save_enabled = true,
-      auto_restore_enabled = false,  -- Disabled initially, enabled after PIN entry
+      auto_restore_enabled = false,  -- Disabled - restored manually after PIN entry
       auto_session_suppress_dirs = { '~/', '~/Projects', '~/Downloads', '/' },
       pre_save_cmds = { 'Neotree close' },
       post_restore_cmds = { 'Neotree reveal' },
+      -- Prevent auto-restore from interfering with startup screen
+      bypass_session_save_file_types = { 'startup', 'neo-tree' },
+    })
+    
+    -- Ensure auto-restore never runs automatically
+    vim.api.nvim_create_autocmd('VimEnter', {
+      callback = function()
+        -- Double-check auto_restore is disabled
+        -- Note: auto-session doesn't expose config directly, 
+        -- but we've already set auto_restore_enabled = false in setup()
+        -- This is just a safety check
+      end,
+      once = true,
     })
     
     -- Keymaps using centralized registry

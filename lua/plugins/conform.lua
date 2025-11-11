@@ -12,14 +12,14 @@ return {
   keys = function()
     local keys = require('core.keybindings-registry')
     return {
-      {
+    {
         keys.format_buffer,
-        function()
-          require('conform').format { async = true, lsp_fallback = true }
-        end,
+      function()
+        require('conform').format { async = true, lsp_fallback = true }
+      end,
         mode = { 'n', 'v' },
         desc = 'Format buffer',
-      },
+    },
     }
   end,
   config = function()

@@ -12,14 +12,28 @@ return {
     local lint = require('lint')
 
     -- ============================================================================
+    -- CHECK IF ESLINT IS AVAILABLE
+    -- ============================================================================
+    local has_eslint = vim.fn.executable('eslint') == 1
+
+    -- ============================================================================
     -- LINTERS BY FILETYPE
     -- ============================================================================
     lint.linters_by_ft = {
-      javascript = { 'eslint' },
-      javascriptreact = { 'eslint' },
-      typescript = { 'eslint' },
-      typescriptreact = { 'eslint' },
+      -- Only enable ESLint if it's installed
+      -- javascript = { 'eslint' },
+      -- javascriptreact = { 'eslint' },
+      -- typescript = { 'eslint' },
+      -- typescriptreact = { 'eslint' },
     }
+
+    -- Enable ESLint only if available
+    if has_eslint then
+      lint.linters_by_ft.javascript = { 'eslint' }
+      lint.linters_by_ft.javascriptreact = { 'eslint' }
+      lint.linters_by_ft.typescript = { 'eslint' }
+      lint.linters_by_ft.typescriptreact = { 'eslint' }
+    end
 
     -- ============================================================================
     -- AUTO-LINT TRIGGERS
@@ -29,7 +43,11 @@ return {
     vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost', 'InsertLeave' }, {
       group = lint_augroup,
       callback = function()
-        lint.try_lint()  -- Run linters for current filetype
+        -- Only lint if linters are configured for this filetype
+        local ft = vim.bo.filetype
+        if lint.linters_by_ft[ft] and #lint.linters_by_ft[ft] > 0 then
+          lint.try_lint()
+        end
       end,
     })
   end,

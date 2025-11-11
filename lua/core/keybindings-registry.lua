@@ -243,6 +243,14 @@ M.analytics_status = '<leader>ks'
 M.analytics_export = '<leader>ke'
 
 -- ============================================================================
+-- BUDDY (AI Companion - Talk About Anything)
+-- ============================================================================
+M.buddy_toggle_chat = '<leader>bb'
+M.buddy_toggle_auto = '<leader>ba'
+M.buddy_status = '<leader>bs'
+M.buddy_minimize = '<leader>bm'
+
+-- ============================================================================
 -- MISC
 -- ============================================================================
 M.next_reference = ']]'  -- Note: Conflicts with Treesitter class navigation in some contexts
