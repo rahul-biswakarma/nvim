@@ -253,8 +253,8 @@ M.buddy_minimize = '<leader>bm'
 -- ============================================================================
 -- MISC
 -- ============================================================================
-M.next_reference = ']]'  -- Note: Conflicts with Treesitter class navigation in some contexts
-M.prev_reference = '[['  -- Note: Conflicts with Treesitter class navigation in some contexts
+M.next_reference = ']i'
+M.prev_reference = '[i'
 
 -- ============================================================================
 -- HELPER FUNCTIONS (for conflict checking if needed)

@@ -47,7 +47,7 @@ local function get_win_config()
     row = screen_height - height - 2,
     border = ui_state.collapsed and "none" or config.options.ui.border,
     style = "minimal",
-    focusable = true, -- Focusable to catch keypresses
+    focusable = false,
     zindex = 100,
   }
 end
@@ -139,11 +139,7 @@ local function create_chat_window()
   vim.api.nvim_buf_set_option(ui_state.bufnr, "buftype", "nofile")
 
   local win_opts = get_win_config()
-  ui_state.win_id = vim.api.nvim_open_win(ui_state.bufnr, true, win_opts)
-
-  -- Keymap for collapsing
-  vim.keymap.set("n", "-", M.toggle_collapse, { buffer = ui_state.bufnr, silent = true })
-  vim.keymap.set("n", "q", M.close, { buffer = ui_state.bufnr, silent = true })
+  ui_state.win_id = vim.api.nvim_open_win(ui_state.bufnr, false, win_opts)
 end
 
 ---Opens the buddy window.

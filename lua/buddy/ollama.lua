@@ -33,7 +33,13 @@ function M.request(buddy_profile, system_prompt, user_prompt, chat_history, reas
 
   -- Add chat history
   for _, message in ipairs(chat_history) do
-    local role = message.sender == "You" and "user" or "assistant"
+    local sender = message.sender
+    local role
+    if sender == "user" then
+      role = "user"
+    else
+      role = "assistant"
+    end
     table.insert(messages, { role = role, content = message.text })
   end
 
@@ -60,7 +66,6 @@ function M.request(buddy_profile, system_prompt, user_prompt, chat_history, reas
   ), {
     stdout_buffered = true,
     on_stdout = function(_, data)
-      vim.notify("Ollama: Response received.", vim.log.levels.INFO)
       local duration_ms = (vim.loop.hrtime() - start_time) / 1e6
       if not data or #data == 0 then
         vim.notify("Ollama: Received empty response.", vim.log.levels.WARN)
@@ -120,8 +125,6 @@ end
 ---@param topic string The topic to research.
 ---@param callback function The function to call with the research result.
 function M.research(topic, callback)
-  vim.notify("Buddy is researching: " .. topic, vim.log.levels.INFO)
-
   local endpoint = config.options.ollama.endpoint
   local timeout_seconds = (config.options.ollama.timeout or 30000) / 1000
   local research_opts = config.options.ollama.json_fixer or {} -- Re-using for now
@@ -244,11 +247,11 @@ function M.generate_topics(callback)
   ), {
     stdout_buffered = true,
     on_stdout = function(_, data)
-      local duration_ms = (vim.loop.hrtime() - start_time) / 1e6
       if not data or #data == 0 then
         callback(nil)
         return
       end
+      local duration_ms = (vim.loop.hrtime() - start_time) / 1e6
 
       local response_text = table.concat(data, "\n")
       -- Find the JSON object in the response

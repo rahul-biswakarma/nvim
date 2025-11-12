@@ -10,15 +10,24 @@ local buddy_root = vim.fn.stdpath("config") .. "/buddies/"
 ---@param buddy_name string The name of the buddy (e.g., "asta").
 ---@return string | nil The system prompt content or nil if not found.
 function M.get_system_prompt(buddy_name)
+  local common_path = buddy_root .. "common_prompt.txt"
+  local common_file = io.open(common_path, "r")
+  local common_content = ""
+  if common_file then
+    common_content = common_file:read("*a")
+    common_file:close()
+  end
+
   local path = buddy_root .. buddy_name .. "/system.txt"
   local file = io.open(path, "r")
   if not file then
     vim.notify("Could not find system prompt for buddy: " .. buddy_name, vim.log.levels.ERROR, { timeout = false })
     return nil
   end
-  local content = file:read("*a")
+  local specific_content = file:read("*a")
   file:close()
-  return content
+
+  return common_content .. "\n\n" .. specific_content
 end
 
 ---Gets the path for a buddy's data directory.
@@ -41,6 +50,11 @@ function M.get_topic_bank(buddy_name)
   end
   local content = file:read("*a")
   file:close()
+
+  if content == "" then
+    return {}
+  end
+
   local ok, data = pcall(vim.json.decode, content)
   if not ok then
     vim.notify("Failed to parse topic bank for " .. buddy_name, vim.log.levels.WARN)

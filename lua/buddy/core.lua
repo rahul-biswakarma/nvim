@@ -116,6 +116,22 @@ local function summarize_events(events)
   return table.concat(summary, "\n")
 end
 
+local function build_greeting_prompt()
+  local buddy_name = state.get_active_buddy()
+  local context_lines = {
+    "[START OF CONTEXT]",
+    "User: Rahul",
+    "Event: A new Neovim session has just started.",
+    "Project: " .. vim.fn.getcwd(),
+    "Time: " .. os.date(),
+    "",
+    "[YOUR TASK]",
+    string.format("You are %s. Greet Rahul as he starts his session. Keep it brief and in-character.", buddy_name),
+    "Respond ONLY with the JSON format defined in your system prompt.",
+  }
+  return table.concat(context_lines, "\n")
+end
+
 local function build_user_prompt(research_result)
   local buddy_name = state.get_active_buddy()
   local event_accumulator = state.get_event_accumulator()
@@ -188,15 +204,12 @@ local function build_user_prompt(research_result)
 end
 
 local function handle_llm_response(response_content, ctx)
-  vim.notify("Buddy: Handling LLM response.", vim.log.levels.INFO)
-
   local function finalize()
     state.set_pending_response(false)
     process_trigger_queue()
   end
 
   if not response_content then
-    vim.notify("Buddy: Received empty response content.", vim.log.levels.WARN)
     finalize()
     return
   end
@@ -224,7 +237,6 @@ local function handle_llm_response(response_content, ctx)
       return
     end
 
-    vim.notify(string.format("Buddy action: research ('%s')", topic), vim.log.levels.INFO)
     state.set_pending_response(false)
 
     ollama.research(topic, function(research_result)
@@ -240,8 +252,6 @@ local function handle_llm_response(response_content, ctx)
     local response_type = parsed.response_type
     local message = parsed.message
     local internal_state_update = parsed.internal_state_update
-
-    vim.notify(string.format("Buddy action: %s", response_type), vim.log.levels.INFO)
 
     if response_type == vim.NIL then
       response_type = nil
@@ -273,14 +283,11 @@ local function handle_llm_response(response_content, ctx)
       local clean_message = message:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
       local last_buddy_message = state.get_last_buddy_message()
       if not (last_buddy_message and last_buddy_message == clean_message) then
-        vim.notify(string.format("Buddy says: %s", clean_message), vim.log.levels.INFO)
         state.add_chat_message("buddy", clean_message)
         if not ui.is_open() then
           ui.open()
         end
         ui.render()
-      else
-        vim.notify("Buddy thought, but response was a repeat.", vim.log.levels.INFO)
       end
     end
 
@@ -289,7 +296,6 @@ local function handle_llm_response(response_content, ctx)
       memory_to_store = nil
     end
     if memory_to_store then
-      vim.notify(string.format("Buddy storing memory: '%s'", memory_to_store), vim.log.levels.INFO)
       profiles.append_memory(ctx and ctx.buddy_name or state.get_active_buddy(), memory_to_store)
     end
 
@@ -299,7 +305,6 @@ local function handle_llm_response(response_content, ctx)
   end
 
   local function handle_valid_json(parsed, raw, json_segment)
-    vim.notify("Buddy: LLM response parsed successfully.", vim.log.levels.INFO)
     apply_parsed_response(parsed, raw, json_segment)
     finalize()
   end
@@ -367,10 +372,7 @@ local function handle_llm_response(response_content, ctx)
 end
 
 function trigger_llm(reason, research_result)
-  vim.notify(string.format("Buddy: Triggered by '%s'.", reason), vim.log.levels.INFO)
-
   if state.is_pending_response() then
-    vim.notify("Buddy: Call deferred, another request is pending.", vim.log.levels.INFO)
     state.enqueue_trigger(reason)
     return
   end
@@ -385,12 +387,10 @@ function trigger_llm(reason, research_result)
     return
   end
 
-  vim.notify("Buddy: Building prompt...", vim.log.levels.INFO)
   local user_prompt = build_user_prompt(research_result)
   local history = state.get_chat_history()
 
   state.clear_event_accumulator()
-  vim.notify("Buddy: Calling Ollama...", vim.log.levels.INFO)
   ollama.request(profile, system_prompt, user_prompt, history, reason, function(response_content)
     handle_llm_response(response_content, {
       buddy_name = buddy_name,
@@ -432,7 +432,6 @@ local function fetch_new_topic_ideas()
         table.insert(new_ideas, { idea = topic, timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ") })
       end
       profiles.add_topics(buddy_name, new_ideas)
-      vim.notify("Buddy has new topic ideas.", vim.log.levels.INFO)
     end
   end)
 end
@@ -452,6 +451,35 @@ local function setup_timers()
   end
 end
 
+local function trigger_initial_greeting()
+  if state.is_pending_response() then
+    -- If something is already running, just skip the greeting
+    return
+  end
+
+  state.set_pending_response(true)
+
+  local buddy_name = state.get_active_buddy()
+  local profile = profiles.get_buddy_profile(buddy_name)
+  local system_prompt = profiles.get_system_prompt(buddy_name)
+  if not system_prompt then
+    state.set_pending_response(false)
+    return
+  end
+
+  local user_prompt = build_greeting_prompt()
+
+  -- No history and no event clearing for the first call
+  ollama.request(profile, system_prompt, user_prompt, {}, "Initial Greeting", function(response_content)
+    handle_llm_response(response_content, {
+      buddy_name = buddy_name,
+      system_prompt = system_prompt,
+      user_prompt = user_prompt,
+      reason = "Initial Greeting",
+    })
+  end)
+end
+
 ---Initializes the core module.
 function M.init(opts)
   opts = opts or {}
@@ -463,7 +491,7 @@ function M.init(opts)
   setup_timers()
   -- Trigger a greeting on startup
   vim.defer_fn(function()
-    trigger_llm("Buddy Initialized")
+    trigger_initial_greeting()
   end, 1000)
 end
 

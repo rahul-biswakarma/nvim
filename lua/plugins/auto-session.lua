@@ -11,7 +11,7 @@ return {
     local keys = require('core.keybindings-registry')
     
     require('auto-session').setup({
-      log_level = 'error',
+      log_level = 'off',
       auto_session_enable_last_session = true,
       auto_session_root_dir = vim.fn.stdpath('data') .. '/sessions/',
       auto_session_enabled = true,

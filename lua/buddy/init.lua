@@ -99,6 +99,13 @@ function M.setup(user_opts)
       end
     end)
   end, { desc = "Send message to buddy" })
+
+  vim.keymap.set("n", "<leader>am", function()
+    ensure_core()
+    if ui.is_open() then
+      ui.toggle_collapse()
+    end
+  end, { desc = "Minimize or expand the buddy window" })
 end
 
 return M
