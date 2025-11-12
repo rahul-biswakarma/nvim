@@ -7,6 +7,15 @@ return {
             "MunifTanjim/nui.nvim",
             "nvim-tree/nvim-web-devicons",
         },
-        lazy = false, -- neo-tree will lazily load itself
+        lazy = false,
+        opts = {
+            filesystem = {
+                filtered_items = {
+                    visible = true, -- Show hidden files
+                    hide_dotfiles = false,
+                    hide_gitignored = false,
+                },
+            },
+        },
     }
 }
