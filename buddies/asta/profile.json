@@ -1,0 +1,8 @@
+{
+  "llm": {
+    "model": "hf.co/Orenguteng/Llama-3-8B-Lexi-Uncensored-GGUF:Q8_0",
+    "temperature": 0.75,
+    "max_tokens": 10000
+  }
+}
+

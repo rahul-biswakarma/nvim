@@ -72,7 +72,7 @@ return {
           elseif luasnip.expand_or_jumpable() then
             luasnip.expand_or_jump()                     -- Expand/jump snippet
           else
-            fallback()                                    -- Default Tab behavior
+            cmp.complete()                               -- Try to trigger completion
           end
         end, { 'i', 's' }),  -- Insert & Select modes
         
@@ -83,7 +83,7 @@ return {
           elseif luasnip.jumpable(-1) then
             luasnip.jump(-1)                             -- Jump back in snippet
           else
-            fallback()                                    -- Default Shift-Tab behavior
+            -- Do nothing to avoid inserting a literal tab
           end
         end, { 'i', 's' }),  -- Insert & Select modes
       },

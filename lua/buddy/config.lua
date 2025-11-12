@@ -4,7 +4,7 @@ local M = {}
 
 M.options = {
   -- The default buddy to load on startup
-  default_buddy = "bro",
+  default_buddy = "bro_asta",
 
   -- Base directory for all buddy data
   data_path = vim.fn.expand('~/Documents/.raw/buddy/'),
@@ -24,6 +24,8 @@ M.options = {
     idle_threshold = 180000, -- 3 minutes
     -- How often to fetch new topic ideas (in ms)
     topic_generation_interval = 600000, -- 10 minutes
+    -- Maximum number of recent chat messages to include when prompting buddies
+    max_history = 40,
   },
 
   -- Ollama settings

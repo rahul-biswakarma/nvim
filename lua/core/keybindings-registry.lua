@@ -109,8 +109,8 @@ M.rust_render_diagnostic = '<leader>rD'
 -- ============================================================================
 -- BUFFERS & WINDOWS
 -- ============================================================================
-M.next_buffer = '<Tab>'
-M.prev_buffer = '<S-Tab>'
+-- M.next_buffer = '<Tab>' -- Removed to free up <Tab> for nvim-cmp
+-- M.prev_buffer = '<S-Tab>' -- Removed to free up <S-Tab> for nvim-cmp
 M.close_buffer = '<leader>x'
 M.pin_buffer = '<leader>bp'
 M.close_unpinned_buffers = '<leader>bP'

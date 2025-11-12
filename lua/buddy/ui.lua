@@ -103,7 +103,14 @@ function M.render()
     local line_num = 0
 
     for _, msg in ipairs(history) do
-      local sender = msg.sender == "user" and "You" or state.get_active_buddy()
+      local sender
+      if msg.sender == "user" then
+        sender = "Rahul"
+      elseif msg.sender == "rahul_event" then
+        sender = "Rahul"
+      else
+        sender = msg.sender or state.get_active_buddy()
+      end
       local sender_line = string.format("%s:", sender)
       table.insert(lines, sender_line)
       vim.api.nvim_buf_add_highlight(ui_state.bufnr, -1, "BuddyName", line_num, 0, #sender_line)

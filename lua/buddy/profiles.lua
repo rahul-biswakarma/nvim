@@ -85,6 +85,17 @@ function M.append_memory(buddy_name, memory_entry)
     return
   end
 
+  local function get_existing_set(name)
+    local existing = {}
+    local content = M.get_memory(name)
+    if content and content ~= "" then
+      for line in content:gmatch("[^\r\n]+") do
+        existing[line] = true
+      end
+    end
+    return existing
+  end
+
   local lines = {}
   if type(memory_entry) == "string" then
     if memory_entry:match("%S") then
@@ -102,13 +113,17 @@ function M.append_memory(buddy_name, memory_entry)
     return
   end
 
+  local existing_set = get_existing_set(buddy_name)
   local path = M.get_buddy_data_path(buddy_name) .. "/memory.txt"
   local file = io.open(path, "a")
   if not file then
     return
   end
   for _, line in ipairs(lines) do
-    file:write(line, "\n")
+    if not existing_set[line] then
+      file:write(line, "\n")
+      existing_set[line] = true
+    end
   end
   file:close()
 end
@@ -196,6 +211,25 @@ function M.get_buddy_profile(buddy_name)
   }
 
   return vim.tbl_deep_extend("force", defaults, profile_data)
+end
+
+function M.is_group(buddy_name)
+  local ok, profile = pcall(M.get_buddy_profile, buddy_name)
+  if not ok or not profile then
+    return false
+  end
+  return profile.members ~= nil and vim.islist(profile.members)
+end
+
+function M.get_group_members(buddy_name)
+  local ok, profile = pcall(M.get_buddy_profile, buddy_name)
+  if not ok or not profile or not profile.members then
+    return {}
+  end
+  if not vim.islist(profile.members) then
+    return {}
+  end
+  return profile.members
 end
 
 return M

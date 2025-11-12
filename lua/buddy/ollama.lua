@@ -35,12 +35,19 @@ function M.request(buddy_profile, system_prompt, user_prompt, chat_history, reas
   for _, message in ipairs(chat_history) do
     local sender = message.sender
     local role
+    local content = message.text
     if sender == "user" then
       role = "user"
+      content = "Rahul: " .. message.text
+    elseif sender == "rahul_event" then
+      role = "user"
+      content = "Rahul activity: " .. message.text
     else
       role = "assistant"
+      local label = sender or "Buddy"
+      content = label .. ": " .. message.text
     end
-    table.insert(messages, { role = role, content = message.text })
+    table.insert(messages, { role = role, content = content })
   end
 
   -- Add current user prompt

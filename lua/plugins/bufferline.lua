@@ -192,26 +192,11 @@ return {
     local keys = require('core.keybindings-registry')
     
     -- Buffer navigation
-    keys.register_keymap('bufferline', 'n', keys.next_buffer, ':BufferLineCycleNext<CR>', { desc = 'Next buffer' })
-    keys.register_keymap('bufferline', 'n', keys.prev_buffer, ':BufferLineCyclePrev<CR>', { desc = 'Previous buffer' })
+    -- keys.register_keymap('bufferline', 'n', keys.next_buffer, ':BufferLineCycleNext<CR>', { desc = 'Next buffer' }) -- Removed to free up <Tab> for nvim-cmp
+    -- keys.register_keymap('bufferline', 'n', keys.prev_buffer, ':BufferLineCyclePrev<CR>', { desc = 'Previous buffer' }) -- Removed to free up <S-Tab> for nvim-cmp
     
     -- Smart buffer close: switches to next buffer before closing current
-    keys.register_keymap('bufferline', 'n', keys.close_buffer, function()
-      local current_buf = vim.api.nvim_get_current_buf()
-      local bufs = vim.tbl_filter(function(bufnr)
-        return vim.api.nvim_buf_is_valid(bufnr) 
-          and vim.bo[bufnr].buflisted 
-          and bufnr ~= current_buf
-      end, vim.api.nvim_list_bufs())
-      
-      if #bufs == 0 then
-        vim.notify('Cannot close last buffer', vim.log.levels.WARN)
-        return
-      end
-      
-      vim.cmd('BufferLineCycleNext')
-      vim.cmd('bdelete ' .. current_buf)
-    end, { desc = 'Close buffer' })
+    keys.register_keymap('bufferline', 'n', keys.close_buffer, ':bdelete<CR>', { desc = 'Close buffer' })
     
     -- Buffer pinning (keeps buffer fixed in position)
     keys.register_keymap('bufferline', 'n', keys.pin_buffer, ':BufferLineTogglePin<CR>', { desc = 'Pin/unpin buffer' })

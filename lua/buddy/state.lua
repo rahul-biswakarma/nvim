@@ -11,7 +11,7 @@ local session_state = {
   session_chat_history = {},
   event_accumulator = {},
   current_event_weight = 0,
-  llm_internal_state = "",
+  llm_internal_state = {},
   browser_tabs_cache = {},
   last_llm_call_time = 0,
   pending_response = false,
@@ -29,7 +29,7 @@ function M.reset_for_buddy_switch()
   session_state.session_chat_history = {}
   session_state.event_accumulator = {}
   session_state.current_event_weight = 0
-  session_state.llm_internal_state = ""
+  session_state.llm_internal_state = {}
   session_state.trigger_queue = {}
 end
 
@@ -63,6 +63,22 @@ end
 ---@return table
 function M.get_chat_history()
   return session_state.session_chat_history
+end
+
+function M.get_recent_chat_history(limit)
+  limit = limit or (config.options.core and config.options.core.max_history) or 40
+  local history = session_state.session_chat_history
+  local count = #history
+  if count <= limit then
+    return vim.deepcopy(history)
+  end
+
+  local slice = {}
+  local start_index = count - limit + 1
+  for i = start_index, count do
+    table.insert(slice, history[i])
+  end
+  return slice
 end
 
 ---Adds a neovim event to the accumulator.
@@ -105,14 +121,24 @@ end
 
 ---Updates the LLM's internal state (scratchpad).
 ---@param new_state string
-function M.set_llm_internal_state(new_state)
-  session_state.llm_internal_state = new_state
+function M.set_llm_internal_state(buddy_name, new_state)
+  if not buddy_name then
+    return
+  end
+  session_state.llm_internal_state[buddy_name] = new_state
 end
 
 ---Gets the LLM's internal state.
 ---@return string
-function M.get_llm_internal_state()
-  return session_state.llm_internal_state
+function M.get_llm_internal_state(buddy_name)
+  if not buddy_name then
+    return ""
+  end
+  local state_value = session_state.llm_internal_state[buddy_name]
+  if state_value == nil then
+    return ""
+  end
+  return state_value
 end
 
 ---Updates the browser tabs cache.
@@ -150,10 +176,25 @@ function M.has_queued_triggers()
   return #session_state.trigger_queue > 0
 end
 
-function M.get_last_buddy_message()
+function M.get_last_buddy_message(buddy_name)
   for i = #session_state.session_chat_history, 1, -1 do
     local entry = session_state.session_chat_history[i]
-    if entry.sender == "buddy" then
+    if entry.sender ~= "user" and entry.sender ~= "rahul_event" then
+      if not buddy_name or entry.sender == buddy_name then
+        return entry.text
+      end
+    end
+  end
+  return nil
+end
+
+function M.get_last_message_from(sender)
+  if not sender then
+    return nil
+  end
+  for i = #session_state.session_chat_history, 1, -1 do
+    local entry = session_state.session_chat_history[i]
+    if entry.sender == sender then
       return entry.text
     end
   end

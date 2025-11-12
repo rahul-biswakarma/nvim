@@ -57,67 +57,147 @@ local event_weights = {
   CursorHoldI = 1,
 }
 
-local function summarize_events(events)
+local function collect_event_messages(events)
   if not events or #events == 0 then
-    return "- No new editor events."
+    return {}
   end
 
-  local summary = {}
-  local file_switches = {}
-  local buffers_closed_count = 0 -- New counter for BufDelete
-  local text_changed_count = 0
-  local cursor_hold_count = 0
-  local plugins_opened = {}
+  local function basename(path)
+    if not path or path == "" then return nil end
+    local name = vim.fn.fnamemodify(path, ":t")
+    if name == "" then
+      return nil
+    end
+    return name
+  end
+
+  local tools = {}
+  local switch_sequence, switch_seen = {}, {}
+  local closed_files = {}
+  local edits = {}
+  local pauses = 0
 
   for _, event in ipairs(events) do
+    local details = event.details or {}
     if event.type == "Plugin" then
-      if event.details and event.details.name and not plugins_opened[event.details.name] then
-        plugins_opened[event.details.name] = true
+      if details.name and not tools[details.name] then
+        tools[details.name] = true
       end
     elseif event.type == "BufEnter" then
-      local filename = event.details and event.details.file
-      if filename and filename ~= "" then
-        table.insert(file_switches, vim.fn.fnamemodify(filename, ":t"))
+      local name = basename(details.file)
+      if name then
+        table.insert(switch_sequence, name)
+        switch_seen[name] = true
       end
-    elseif event.type == "BufDelete" then -- Handle BufDelete
-      buffers_closed_count = buffers_closed_count + 1
+    elseif event.type == "BufDelete" then
+      local name = basename(details.file)
+      if name then
+        closed_files[name] = (closed_files[name] or 0) + 1
+      end
     elseif event.type == "TextChanged" or event.type == "TextChangedI" then
-      text_changed_count = text_changed_count + 1
+      local name = basename(details.file)
+      if name then
+        edits[name] = (edits[name] or 0) + 1
+      else
+        edits["(unsaved buffer)"] = (edits["(unsaved buffer)"] or 0) + 1
+      end
     elseif event.type == "CursorHold" or event.type == "CursorHoldI" then
-      cursor_hold_count = cursor_hold_count + 1
+      pauses = pauses + 1
     end
   end
 
-  local opened_plugins_list = {}
-  for name, _ in pairs(plugins_opened) do
-    table.insert(opened_plugins_list, name)
-  end
-  if #opened_plugins_list > 0 then
-    table.insert(summary, string.format("- Opened tools: %s.", table.concat(opened_plugins_list, ", ")))
+  local messages = {}
+
+  local tool_list = vim.tbl_keys(tools)
+  table.sort(tool_list)
+  if #tool_list > 0 then
+    local joined = table.concat(tool_list, ", ")
+    table.insert(messages, "opened tools: " .. joined .. ".")
   end
 
-  if #file_switches > 0 then
-    table.insert(summary, string.format("- Switched between files: %s.", table.concat(file_switches, ", ")))
-  end
-  if buffers_closed_count > 0 then -- Add BufDelete to summary
-    table.insert(summary, string.format("- Closed %d buffers.", buffers_closed_count))
-  end
-  if text_changed_count > 0 then
-    table.insert(summary, string.format("- Made %d text changes.", text_changed_count))
-  end
-  if cursor_hold_count > 0 then
-    table.insert(summary, string.format("- Paused or was idle %d times.", cursor_hold_count))
+  if #switch_sequence > 0 then
+    -- reduce consecutive duplicates
+    local deduped = {}
+    local last = nil
+    for _, name in ipairs(switch_sequence) do
+      if name ~= last then
+        table.insert(deduped, name)
+        last = name
+      end
+    end
+    if #deduped == 1 then
+      table.insert(messages, "switched to " .. deduped[1] .. ".")
+    elseif #deduped == 2 then
+      table.insert(messages, string.format("bounced between %s and %s.", deduped[1], deduped[2]))
+    else
+      local all_but_last = { unpack(deduped, 1, #deduped - 1) }
+      table.insert(messages, string.format("cycled through %s, and %s.", table.concat(all_but_last, ", "), deduped[#deduped]))
+    end
   end
 
-  if #summary == 0 then
-    return string.format("- %d unclassified editor events occurred.", #events)
+  local closed_names = vim.tbl_keys(closed_files)
+  table.sort(closed_names)
+  for _, name in ipairs(closed_names) do
+    local count = closed_files[name]
+    if count > 1 then
+      table.insert(messages, string.format("closed %s %d times.", name, count))
+    else
+      table.insert(messages, "closed " .. name .. ".")
+    end
   end
 
-  return table.concat(summary, "\n")
+  local edit_names = vim.tbl_keys(edits)
+  table.sort(edit_names)
+  for _, name in ipairs(edit_names) do
+    local count = edits[name]
+    if count > 2 then
+      table.insert(messages, string.format("edited %s %d times.", name, count))
+    elseif count == 2 then
+      table.insert(messages, string.format("went back to tweak %s again.", name))
+    else
+      if name == "(unsaved buffer)" then
+        table.insert(messages, "edited an unnamed buffer.")
+      else
+        table.insert(messages, "edited " .. name .. ".")
+      end
+    end
+  end
+
+  if pauses > 0 then
+    if pauses == 1 then
+      table.insert(messages, "paused for a moment.")
+    else
+      table.insert(messages, string.format("hit pause %d times.", pauses))
+    end
+  end
+
+  if #messages == 0 then
+    return { string.format("made %d moves in the editor.", #events) }
+  end
+
+  return messages
 end
 
-local function build_greeting_prompt()
-  local buddy_name = state.get_active_buddy()
+local function record_events_as_chat(events)
+  local messages = collect_event_messages(events)
+  local count = 0
+  local max_messages = math.min(#messages, 5)
+  for index = 1, max_messages do
+    local msg = messages[index]
+    if msg and msg ~= "" then
+      msg = msg:gsub("^%l", string.upper)
+      state.add_chat_message("rahul_event", msg)
+      count = count + 1
+    end
+  end
+  if #messages > max_messages then
+    state.add_chat_message("rahul_event", "Kept juggling a few more things in the editor.")
+    count = count + 1
+  end
+  return count
+end
+
+local function build_greeting_prompt(buddy_name)
   local context_lines = {
     "[START OF CONTEXT]",
     "User: Rahul",
@@ -132,11 +212,9 @@ local function build_greeting_prompt()
   return table.concat(context_lines, "\n")
 end
 
-local function build_user_prompt(research_result)
-  local buddy_name = state.get_active_buddy()
-  local event_accumulator = state.get_event_accumulator()
-  local internal_state = state.get_llm_internal_state()
-  local chat_history = state.get_chat_history()
+local function build_user_prompt(buddy_name, research_result)
+  local internal_state = state.get_llm_internal_state(buddy_name)
+  local chat_history = state.get_recent_chat_history()
   local memory_notes = profiles.get_memory(buddy_name)
   local topic_bank = profiles.get_topic_bank(buddy_name)
 
@@ -154,11 +232,6 @@ local function build_user_prompt(research_result)
   if research_result then
     table.insert(context_lines, "\n[RESEARCH RESULT]")
     table.insert(context_lines, research_result)
-  end
-
-  if event_accumulator and #event_accumulator > 0 then
-    table.insert(context_lines, "\nRecent Activity (Since last talk):")
-    table.insert(context_lines, summarize_events(event_accumulator))
   end
 
   if topic_bank and #topic_bank > 0 then
@@ -189,8 +262,15 @@ local function build_user_prompt(research_result)
   table.insert(context_lines, "\nLLM Internal State (Your Scratchpad):\n" .. internal_state)
   table.insert(context_lines, "\n[CHAT HISTORY]")
   for _, msg in ipairs(chat_history) do
-    local sender = msg.sender == "user" and "Rahul" or buddy_name
-    table.insert(context_lines, string.format("%s: %s", sender, msg.text))
+    local sender
+    if msg.sender == "user" then
+      sender = "Rahul"
+    elseif msg.sender and msg.sender ~= "" then
+      sender = msg.sender
+    else
+      sender = buddy_name
+    end
+      table.insert(context_lines, string.format("%s: %s", sender, msg.text))
   end
 
   table.insert(context_lines, "\n[YOUR TASK]")
@@ -204,9 +284,14 @@ local function build_user_prompt(research_result)
 end
 
 local function handle_llm_response(response_content, ctx)
+  local ctx_buddy_name = ctx and ctx.buddy_name or state.get_active_buddy()
   local function finalize()
-    state.set_pending_response(false)
-    process_trigger_queue()
+    if ctx and ctx.finalize then
+      ctx.finalize()
+    else
+      state.set_pending_response(false)
+      process_trigger_queue()
+    end
   end
 
   if not response_content then
@@ -281,9 +366,9 @@ local function handle_llm_response(response_content, ctx)
 
     if response_type == "speak" and message and message ~= "" then
       local clean_message = message:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
-      local last_buddy_message = state.get_last_buddy_message()
+      local last_buddy_message = state.get_last_buddy_message(ctx_buddy_name)
       if not (last_buddy_message and last_buddy_message == clean_message) then
-        state.add_chat_message("buddy", clean_message)
+        state.add_chat_message(ctx_buddy_name, clean_message)
         if not ui.is_open() then
           ui.open()
         end
@@ -295,12 +380,59 @@ local function handle_llm_response(response_content, ctx)
     if memory_to_store == vim.NIL then
       memory_to_store = nil
     end
-    if memory_to_store then
-      profiles.append_memory(ctx and ctx.buddy_name or state.get_active_buddy(), memory_to_store)
+    local function append_memory(target, entry)
+      if not entry or entry == "" then
+        return
+      end
+      target = target or ctx_buddy_name
+      if not target then
+        return
+      end
+      if type(target) == "string" then
+        local lowered = target:lower()
+        if lowered == "rahul" or lowered == "user" then
+          return
+        end
+      end
+      profiles.append_memory(target, entry)
     end
 
+    local function handle_memory_payload(payload, default_target)
+      if not payload then
+        return
+      end
+
+      if type(payload) == "string" then
+        append_memory(default_target, payload)
+        return
+      end
+
+      if vim.islist(payload) then
+        for _, item in ipairs(payload) do
+          handle_memory_payload(item, default_target)
+        end
+        return
+      end
+
+      if type(payload) == "table" then
+        local target = payload.target or payload.buddy or payload.owner or default_target
+        local entry = payload.entry or payload.text or payload.note
+        if payload.entries and vim.islist(payload.entries) then
+          for _, item in ipairs(payload.entries) do
+            append_memory(target, item)
+          end
+        end
+        if entry then
+          append_memory(target, entry)
+        end
+        return
+      end
+    end
+
+    handle_memory_payload(memory_to_store, ctx_buddy_name)
+
     if internal_state_update then
-      state.set_llm_internal_state(internal_state_update)
+      state.set_llm_internal_state(ctx_buddy_name, internal_state_update)
     end
   end
 
@@ -371,6 +503,32 @@ local function handle_llm_response(response_content, ctx)
   request_json_fix(response_content)
 end
 
+local function start_llm_request(buddy_name, reason, user_prompt, history, finalize_cb, system_prompt_override)
+  local profile = profiles.get_buddy_profile(buddy_name)
+  local system_prompt = system_prompt_override or profiles.get_system_prompt(buddy_name)
+  if not system_prompt then
+    if finalize_cb then
+      finalize_cb()
+    else
+      state.set_pending_response(false)
+      process_trigger_queue()
+    end
+    return
+  end
+
+  history = history or state.get_recent_chat_history()
+
+  ollama.request(profile, system_prompt, user_prompt, history, reason, function(response_content)
+    handle_llm_response(response_content, {
+      buddy_name = buddy_name,
+      system_prompt = system_prompt,
+      user_prompt = user_prompt,
+      reason = reason,
+      finalize = finalize_cb,
+    })
+  end)
+end
+
 function trigger_llm(reason, research_result)
   if state.is_pending_response() then
     state.enqueue_trigger(reason)
@@ -379,26 +537,39 @@ function trigger_llm(reason, research_result)
 
   state.set_pending_response(true)
 
-  local buddy_name = state.get_active_buddy()
-  local profile = profiles.get_buddy_profile(buddy_name)
-  local system_prompt = profiles.get_system_prompt(buddy_name)
-  if not system_prompt then
-    state.set_pending_response(false)
+  local active_buddy = state.get_active_buddy()
+  local events_snapshot = state.clear_event_accumulator() or {}
+  record_events_as_chat(events_snapshot)
+
+  if profiles.is_group(active_buddy) then
+    local members = profiles.get_group_members(active_buddy)
+    if #members == 0 then
+      state.set_pending_response(false)
+      process_trigger_queue()
+      return
+    end
+
+    local function run_member(index)
+      if index > #members then
+        state.set_pending_response(false)
+        process_trigger_queue()
+        return
+      end
+
+      local member_name = members[index]
+      local user_prompt = build_user_prompt(member_name, research_result)
+
+      start_llm_request(member_name, reason, user_prompt, nil, function()
+        run_member(index + 1)
+      end)
+    end
+
+    run_member(1)
     return
   end
 
-  local user_prompt = build_user_prompt(research_result)
-  local history = state.get_chat_history()
-
-  state.clear_event_accumulator()
-  ollama.request(profile, system_prompt, user_prompt, history, reason, function(response_content)
-    handle_llm_response(response_content, {
-      buddy_name = buddy_name,
-      system_prompt = system_prompt,
-      user_prompt = user_prompt,
-      reason = reason,
-    })
-  end)
+  local user_prompt = build_user_prompt(active_buddy, research_result)
+  start_llm_request(active_buddy, reason, user_prompt)
 end
 
 function M.add_event(event_type, details)
@@ -424,6 +595,9 @@ end
 local function fetch_new_topic_ideas()
   local buddy_name = state.get_active_buddy()
   if not buddy_name then return end
+  if profiles.is_group(buddy_name) then
+    return
+  end
 
   ollama.generate_topics(function(topics)
     if topics and #topics > 0 then
@@ -459,25 +633,36 @@ local function trigger_initial_greeting()
 
   state.set_pending_response(true)
 
-  local buddy_name = state.get_active_buddy()
-  local profile = profiles.get_buddy_profile(buddy_name)
-  local system_prompt = profiles.get_system_prompt(buddy_name)
-  if not system_prompt then
-    state.set_pending_response(false)
+  local active_buddy = state.get_active_buddy()
+
+  if profiles.is_group(active_buddy) then
+    local members = profiles.get_group_members(active_buddy)
+    if #members == 0 then
+      state.set_pending_response(false)
+      return
+    end
+
+    local function greet_member(index)
+      if index > #members then
+        state.set_pending_response(false)
+        process_trigger_queue()
+        return
+      end
+
+      local member_name = members[index]
+      local user_prompt = build_greeting_prompt(member_name)
+
+      start_llm_request(member_name, "Initial Greeting", user_prompt, {}, function()
+        greet_member(index + 1)
+      end)
+    end
+
+    greet_member(1)
     return
   end
 
-  local user_prompt = build_greeting_prompt()
-
-  -- No history and no event clearing for the first call
-  ollama.request(profile, system_prompt, user_prompt, {}, "Initial Greeting", function(response_content)
-    handle_llm_response(response_content, {
-      buddy_name = buddy_name,
-      system_prompt = system_prompt,
-      user_prompt = user_prompt,
-      reason = "Initial Greeting",
-    })
-  end)
+  local user_prompt = build_greeting_prompt(active_buddy)
+  start_llm_request(active_buddy, "Initial Greeting", user_prompt, {})
 end
 
 ---Initializes the core module.
