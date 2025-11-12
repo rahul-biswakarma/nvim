@@ -1,6 +1,6 @@
 {
   "llm": {
-    "model": "nollama/mythomax-l2-13b:Q4_K_M",
+    "model": "llama3",
     "temperature": 0.6,
     "max_tokens": 10000
   }

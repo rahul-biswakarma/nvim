@@ -82,7 +82,18 @@ function M.setup(user_opts)
   -- Keymap for sending messages
   vim.keymap.set("n", "<leader>aa", function()
     ensure_core()
-    vim.ui.input({ prompt = "Message to " .. state.get_active_buddy() .. ": " }, function(input)
+    local ui_info = ui.get_win_info()
+    local opts = {
+      prompt = "Message to " .. state.get_active_buddy() .. ": ",
+    }
+    if ui_info then
+      opts.relative = "win"
+      opts.win = ui_info.win_id
+      opts.row = -1
+      opts.col = 1
+    end
+
+    vim.ui.input(opts, function(input)
       if input and #input > 0 then
         core.on_user_message(input)
       end

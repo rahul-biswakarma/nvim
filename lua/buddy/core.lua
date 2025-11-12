@@ -47,12 +47,82 @@ local function extract_json(str)
   return nil
 end
 
-local function build_user_prompt()
+local event_weights = {
+  Plugin = 15,
+  BufEnter = 5,
+  BufDelete = 5, -- Added BufDelete with a weight of 5
+  TextChanged = 1,
+  TextChangedI = 1,
+  CursorHold = 1,
+  CursorHoldI = 1,
+}
+
+local function summarize_events(events)
+  if not events or #events == 0 then
+    return "- No new editor events."
+  end
+
+  local summary = {}
+  local file_switches = {}
+  local buffers_closed_count = 0 -- New counter for BufDelete
+  local text_changed_count = 0
+  local cursor_hold_count = 0
+  local plugins_opened = {}
+
+  for _, event in ipairs(events) do
+    if event.type == "Plugin" then
+      if event.details and event.details.name and not plugins_opened[event.details.name] then
+        plugins_opened[event.details.name] = true
+      end
+    elseif event.type == "BufEnter" then
+      local filename = event.details and event.details.file
+      if filename and filename ~= "" then
+        table.insert(file_switches, vim.fn.fnamemodify(filename, ":t"))
+      end
+    elseif event.type == "BufDelete" then -- Handle BufDelete
+      buffers_closed_count = buffers_closed_count + 1
+    elseif event.type == "TextChanged" or event.type == "TextChangedI" then
+      text_changed_count = text_changed_count + 1
+    elseif event.type == "CursorHold" or event.type == "CursorHoldI" then
+      cursor_hold_count = cursor_hold_count + 1
+    end
+  end
+
+  local opened_plugins_list = {}
+  for name, _ in pairs(plugins_opened) do
+    table.insert(opened_plugins_list, name)
+  end
+  if #opened_plugins_list > 0 then
+    table.insert(summary, string.format("- Opened tools: %s.", table.concat(opened_plugins_list, ", ")))
+  end
+
+  if #file_switches > 0 then
+    table.insert(summary, string.format("- Switched between files: %s.", table.concat(file_switches, ", ")))
+  end
+  if buffers_closed_count > 0 then -- Add BufDelete to summary
+    table.insert(summary, string.format("- Closed %d buffers.", buffers_closed_count))
+  end
+  if text_changed_count > 0 then
+    table.insert(summary, string.format("- Made %d text changes.", text_changed_count))
+  end
+  if cursor_hold_count > 0 then
+    table.insert(summary, string.format("- Paused or was idle %d times.", cursor_hold_count))
+  end
+
+  if #summary == 0 then
+    return string.format("- %d unclassified editor events occurred.", #events)
+  end
+
+  return table.concat(summary, "\n")
+end
+
+local function build_user_prompt(research_result)
   local buddy_name = state.get_active_buddy()
   local event_accumulator = state.get_event_accumulator()
   local internal_state = state.get_llm_internal_state()
   local chat_history = state.get_chat_history()
   local memory_notes = profiles.get_memory(buddy_name)
+  local topic_bank = profiles.get_topic_bank(buddy_name)
 
   -- Gather context
   local git_comments = external.get_last_git_comments(5)
@@ -65,10 +135,32 @@ local function build_user_prompt()
     "Last 5 Git Commits:\n" .. git_comments,
   }
 
+  if research_result then
+    table.insert(context_lines, "\n[RESEARCH RESULT]")
+    table.insert(context_lines, research_result)
+  end
+
   if event_accumulator and #event_accumulator > 0 then
     table.insert(context_lines, "\nRecent Activity (Since last talk):")
-    -- Simple summary for now
-    table.insert(context_lines, string.format("- %d editor events occurred.", #event_accumulator))
+    table.insert(context_lines, summarize_events(event_accumulator))
+  end
+
+  if topic_bank and #topic_bank > 0 then
+    table.insert(context_lines, "\n[POTENTIAL TOPICS TO DISCUSS]")
+    -- Get up to 5 random topics
+    local random_topics = {}
+    local topic_count = #topic_bank
+    local num_to_get = math.min(5, topic_count)
+
+    -- Simple random sampling
+    for i = 1, topic_count do
+      local j = math.random(i, topic_count)
+      topic_bank[i], topic_bank[j] = topic_bank[j], topic_bank[i]
+    end
+    for i = 1, num_to_get do
+      table.insert(random_topics, "- " .. topic_bank[i].idea)
+    end
+    table.insert(context_lines, table.concat(random_topics, "\n"))
   end
 
   table.insert(context_lines, "\n[MEMORIES]")
@@ -96,12 +188,15 @@ local function build_user_prompt()
 end
 
 local function handle_llm_response(response_content, ctx)
+  vim.notify("Buddy: Handling LLM response.", vim.log.levels.INFO)
+
   local function finalize()
     state.set_pending_response(false)
     process_trigger_queue()
   end
 
   if not response_content then
+    vim.notify("Buddy: Received empty response content.", vim.log.levels.WARN)
     finalize()
     return
   end
@@ -122,10 +217,31 @@ local function handle_llm_response(response_content, ctx)
     return nil
   end
 
+  local function handle_research_action(parsed)
+    local topic = parsed.research_topic
+    if not topic or topic == "" then
+      finalize()
+      return
+    end
+
+    vim.notify(string.format("Buddy action: research ('%s')", topic), vim.log.levels.INFO)
+    state.set_pending_response(false)
+
+    ollama.research(topic, function(research_result)
+      if research_result then
+        trigger_llm("Research result for '" .. topic .. "'", research_result)
+      else
+        finalize()
+      end
+    end)
+  end
+
   local function apply_parsed_response(parsed, raw, json_segment)
     local response_type = parsed.response_type
     local message = parsed.message
     local internal_state_update = parsed.internal_state_update
+
+    vim.notify(string.format("Buddy action: %s", response_type), vim.log.levels.INFO)
 
     if response_type == vim.NIL then
       response_type = nil
@@ -141,6 +257,11 @@ local function handle_llm_response(response_content, ctx)
       internal_state_update = tostring(internal_state_update)
     end
 
+    if response_type == "research" then
+      handle_research_action(parsed)
+      return -- Research action handles its own finalization path
+    end
+
     if response_type == "speak" and (not message or message == "") then
       message = extract_fallback_message(raw, json_segment)
     end
@@ -152,20 +273,15 @@ local function handle_llm_response(response_content, ctx)
       local clean_message = message:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
       local last_buddy_message = state.get_last_buddy_message()
       if not (last_buddy_message and last_buddy_message == clean_message) then
+        vim.notify(string.format("Buddy says: %s", clean_message), vim.log.levels.INFO)
         state.add_chat_message("buddy", clean_message)
         if not ui.is_open() then
           ui.open()
         end
         ui.render()
+      else
+        vim.notify("Buddy thought, but response was a repeat.", vim.log.levels.INFO)
       end
-    end
-
-    local new_topic_ideas = parsed.new_topic_ideas
-    if new_topic_ideas == vim.NIL then
-      new_topic_ideas = nil
-    end
-    if new_topic_ideas then
-      profiles.add_topics(state.get_active_buddy(), new_topic_ideas)
     end
 
     local memory_to_store = parsed.memory_to_store
@@ -173,6 +289,7 @@ local function handle_llm_response(response_content, ctx)
       memory_to_store = nil
     end
     if memory_to_store then
+      vim.notify(string.format("Buddy storing memory: '%s'", memory_to_store), vim.log.levels.INFO)
       profiles.append_memory(ctx and ctx.buddy_name or state.get_active_buddy(), memory_to_store)
     end
 
@@ -182,17 +299,15 @@ local function handle_llm_response(response_content, ctx)
   end
 
   local function handle_valid_json(parsed, raw, json_segment)
+    vim.notify("Buddy: LLM response parsed successfully.", vim.log.levels.INFO)
     apply_parsed_response(parsed, raw, json_segment)
     finalize()
   end
 
   local function request_json_fix(raw_response)
+    vim.notify("Buddy: LLM JSON parse failed. Attempting repair.", vim.log.levels.WARN)
     local fixer_opts = config.options.ollama.json_fixer or {}
     local fixer_model = fixer_opts.model or "gemma3:4b"
-    vim.notify(
-      string.format("LLM JSON parse failed. Attempting repair via %s.", fixer_model),
-      vim.log.levels.WARN
-    )
 
     local fixer_system_prompt = table.concat({
       "You repair JSON responses produced by another assistant.",
@@ -222,7 +337,7 @@ local function handle_llm_response(response_content, ctx)
     state.set_pending_response(true)
     ollama.request(fixer_profile, fixer_system_prompt, fixer_user_prompt, {}, "JSON Fixer", function(fix_response)
       if not fix_response then
-        vim.notify("JSON fixer failed to return a response.", vim.log.levels.ERROR, { timeout = false })
+        vim.notify("Buddy: JSON fixer failed to return a response.", vim.log.levels.ERROR)
         finalize()
         return
       end
@@ -230,7 +345,7 @@ local function handle_llm_response(response_content, ctx)
       local fixed_json = extract_json(fix_response) or fix_response
       local ok_fix, parsed_fix = pcall(vim.json.decode, fixed_json)
       if not ok_fix then
-        vim.notify("JSON fixer returned invalid JSON: " .. fixed_json, vim.log.levels.ERROR, { timeout = false })
+        vim.notify("Buddy: JSON fixer returned invalid JSON: " .. fixed_json, vim.log.levels.ERROR)
         finalize()
         return
       end
@@ -246,16 +361,16 @@ local function handle_llm_response(response_content, ctx)
       handle_valid_json(parsed, response_content, json_str)
       return
     end
-    vim.notify("Failed to parse LLM JSON response; attempting repair.", vim.log.levels.WARN)
-  else
-    vim.notify("Could not find JSON object in LLM response; attempting repair.", vim.log.levels.WARN)
   end
 
   request_json_fix(response_content)
 end
 
-function trigger_llm(reason)
+function trigger_llm(reason, research_result)
+  vim.notify(string.format("Buddy: Triggered by '%s'.", reason), vim.log.levels.INFO)
+
   if state.is_pending_response() then
+    vim.notify("Buddy: Call deferred, another request is pending.", vim.log.levels.INFO)
     state.enqueue_trigger(reason)
     return
   end
@@ -270,10 +385,12 @@ function trigger_llm(reason)
     return
   end
 
-  local user_prompt = build_user_prompt()
+  vim.notify("Buddy: Building prompt...", vim.log.levels.INFO)
+  local user_prompt = build_user_prompt(research_result)
   local history = state.get_chat_history()
 
   state.clear_event_accumulator()
+  vim.notify("Buddy: Calling Ollama...", vim.log.levels.INFO)
   ollama.request(profile, system_prompt, user_prompt, history, reason, function(response_content)
     handle_llm_response(response_content, {
       buddy_name = buddy_name,
@@ -286,8 +403,12 @@ end
 
 function M.add_event(event_type, details)
   state.add_event(event_type, details)
-  if #state.get_event_accumulator() >= config.options.core.event_threshold then
-    trigger_llm("Event threshold reached")
+
+  local weight = event_weights[event_type] or 1
+  state.add_to_current_event_weight(weight)
+
+  if state.get_current_event_weight() >= config.options.core.event_weight_threshold then
+    trigger_llm("Event weight threshold reached")
   end
 end
 
@@ -300,11 +421,35 @@ function M.on_user_message(message)
   trigger_llm("User sent a message")
 end
 
+local function fetch_new_topic_ideas()
+  local buddy_name = state.get_active_buddy()
+  if not buddy_name then return end
+
+  ollama.generate_topics(function(topics)
+    if topics and #topics > 0 then
+      local new_ideas = {}
+      for _, topic in ipairs(topics) do
+        table.insert(new_ideas, { idea = topic, timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ") })
+      end
+      profiles.add_topics(buddy_name, new_ideas)
+      vim.notify("Buddy has new topic ideas.", vim.log.levels.INFO)
+    end
+  end)
+end
+
 local function setup_timers()
   -- Idle timer
   vim.fn.timer_start(config.options.core.idle_threshold, function()
     trigger_llm("Idle threshold reached")
   end, { ["repeat"] = -1 })
+
+  -- Topic generation timer
+  local topic_interval = config.options.core.topic_generation_interval
+  if topic_interval and topic_interval > 0 then
+    vim.fn.timer_start(topic_interval, function()
+      fetch_new_topic_ideas()
+    end, { ["repeat"] = -1 })
+  end
 end
 
 ---Initializes the core module.
@@ -316,6 +461,10 @@ function M.init(opts)
   end
   events.setup_listeners(M.add_event)
   setup_timers()
+  -- Trigger a greeting on startup
+  vim.defer_fn(function()
+    trigger_llm("Buddy Initialized")
+  end, 1000)
 end
 
 return M

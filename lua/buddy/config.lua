@@ -18,16 +18,19 @@ M.options = {
 
   -- Core logic settings
   core = {
-    -- How many events to accumulate before triggering the LLM
-    event_threshold = 20,
+    -- The total weight of events to accumulate before triggering the LLM
+    event_weight_threshold = 50,
     -- How long to wait (in ms) when idle before triggering the LLM
     idle_threshold = 180000, -- 3 minutes
+    -- How often to fetch new topic ideas (in ms)
+    topic_generation_interval = 600000, -- 10 minutes
   },
 
   -- Ollama settings
   ollama = {
     endpoint = "http://localhost:11434/api/chat",
     timeout = 30000, -- 30 seconds
+    default_model = "llama3",
     json_fixer = {
       model = "gemma3:4b",
       temperature = 0,

@@ -41,6 +41,7 @@ function M.setup_listeners(callback)
 
   local events = {
     "BufEnter",
+    "BufDelete",
     "TextChanged",
     "TextChangedI",
     "CursorHold",
@@ -50,6 +51,19 @@ function M.setup_listeners(callback)
   vim.api.nvim_create_autocmd(events, {
     group = event_group,
     callback = function(args)
+      if vim.bo[args.buf].filetype == "neo-tree" then
+        add_event("Plugin", { name = "Neo-tree" })
+        return
+      end
+      if vim.bo[args.buf].filetype == "TelescopePrompt" then
+        add_event("Plugin", { name = "Telescope" })
+        return
+      end
+      if vim.api.nvim_buf_get_name(args.buf):match("lazygit") then
+        add_event("Plugin", { name = "Lazygit" })
+        return
+      end
+
       if is_buffer_ignorable(args.buf) then
         return
       end

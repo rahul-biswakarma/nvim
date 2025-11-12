@@ -10,6 +10,7 @@ local session_state = {
   active_buddy_name = nil,
   session_chat_history = {},
   event_accumulator = {},
+  current_event_weight = 0,
   llm_internal_state = "",
   browser_tabs_cache = {},
   last_llm_call_time = 0,
@@ -27,6 +28,7 @@ end
 function M.reset_for_buddy_switch()
   session_state.session_chat_history = {}
   session_state.event_accumulator = {}
+  session_state.current_event_weight = 0
   session_state.llm_internal_state = ""
   session_state.trigger_queue = {}
 end
@@ -74,18 +76,31 @@ function M.add_event(event_type, details)
   })
 end
 
----Clears the event accumulator.
+---Clears the event accumulator and weight.
 ---@return table The events that were cleared.
 function M.clear_event_accumulator()
   local events = session_state.event_accumulator
   session_state.event_accumulator = {}
+  session_state.current_event_weight = 0
   return events
 end
 
 ---Gets the current event accumulator.
 ---@return table
 function M.get_event_accumulator()
-    return session_state.event_accumulator
+  return session_state.event_accumulator
+end
+
+---Gets the current accumulated event weight.
+---@return number
+function M.get_current_event_weight()
+  return session_state.current_event_weight
+end
+
+---Adds to the current accumulated event weight.
+---@param weight number
+function M.add_to_current_event_weight(weight)
+  session_state.current_event_weight = session_state.current_event_weight + weight
 end
 
 ---Updates the LLM's internal state (scratchpad).
