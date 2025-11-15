@@ -1,6 +1,7 @@
 vim.opt.wrap = false
 vim.opt.swapfile = false
 vim.opt.tabstop = 4
+vim.opt.mouse = "" -- Disable mouse support
 vim.cmd(":hi statusline guibg=NONE")
 vim.cmd(":hi LineNr guibg=NONE")
 vim.cmd(":hi CursorLineNr guibg=NONE")

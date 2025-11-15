@@ -18,6 +18,8 @@ return {
             ["sqls"] = function() end,
             -- Disable ts_ls, using typescript-tools instead
             ["ts_ls"] = function() end,
+            -- Disable rust_analyzer, using rustaceanvim instead
+            ["rust_analyzer"] = function() end,
         },
     },
     dependencies = {
