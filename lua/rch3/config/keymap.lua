@@ -55,3 +55,11 @@ vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { desc = "Go to type defi
 vim.keymap.set("n", "gr", vim.lsp.buf.references, { desc = "Go to references" })
 vim.keymap.set("n", "K", vim.lsp.buf.hover, { desc = "Hover documentation" })
 vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename symbol" })
+
+-- Auto-close quickfix/location list after selecting an item
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "qf",
+    callback = function()
+        vim.keymap.set("n", "<CR>", "<CR>:cclose<CR>:lclose<CR>", { buffer = true, silent = true })
+    end,
+})
