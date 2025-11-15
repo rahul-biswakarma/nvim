@@ -12,6 +12,10 @@ vim.opt.relativenumber = true
 vim.opt.termguicolors = true
 vim.opt.signcolumn = "yes"
 vim.opt.winborder = "rounded"
+vim.opt.cursorline = true
+
+-- Make current line darker than background
+vim.api.nvim_set_hl(0, 'CursorLine', { bg = '#0f1014' })
 
 vim.diagnostic.config({
     virtual_text = {
