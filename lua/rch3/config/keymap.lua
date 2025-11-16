@@ -55,6 +55,17 @@ vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { desc = "Go to type defi
 vim.keymap.set("n", "gr", vim.lsp.buf.references, { desc = "Go to references" })
 vim.keymap.set("n", "K", vim.lsp.buf.hover, { desc = "Hover documentation" })
 vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename symbol" })
+-- Yank into system clipboard
+vim.keymap.set({ 'n', 'v' }, '<leader>y', '"+y') -- yank motion
+vim.keymap.set({ 'n', 'v' }, '<leader>Y', '"+Y') -- yank line
+
+-- Delete into system clipboard
+vim.keymap.set({ 'n', 'v' }, '<leader>d', '"+d') -- delete motion
+vim.keymap.set({ 'n', 'v' }, '<leader>D', '"+D') -- delete line
+
+-- Paste from system clipboard
+vim.keymap.set('n', '<leader>p', '"+p') -- paste after cursor
+vim.keymap.set('n', '<leader>P', '"+P') -- paste before cursor
 
 -- Auto-close quickfix/location list after selecting an item
 vim.api.nvim_create_autocmd("FileType", {
