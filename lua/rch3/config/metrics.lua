@@ -1,11 +1,13 @@
 -- Usage + performance metrics. Minimal, safe, non-invasive.
--- Two log files under stdpath("log"):
+-- Log files under stdpath("log"):
 --   cmp-lag.log  -- completion timing (sources vs render), per keystroke
 --   usage.log    -- startup time + every :command you run (find habits worth a keymap)
+--   errors.log   -- warnings/errors surfaced via vim.notify (LSP, plugins, diagnostics)
 -- Read a live summary anytime with  :Metrics   (or open the raw files).
 local logdir = vim.fn.stdpath("log")
 local cmp_log = logdir .. "/cmp-lag.log"
 local usage_log = logdir .. "/usage.log"
+local err_log = logdir .. "/errors.log"
 
 local function append(file, line)
     local fd = io.open(file, "a")
@@ -52,6 +54,22 @@ vim.api.nvim_create_autocmd("User", {
         last_type, show_at = nil, nil
     end,
 })
+
+-- ── errors: capture warnings/errors so a later session can review them ─────
+-- Catches anything routed through vim.notify (LSP, most plugins, diagnostics).
+-- NOTE: hard message-area errors (raw `:messages`, provider crashes) aren't here
+-- and low-level LSP protocol errors live in lsp.log (see vim.lsp.set_log_level below).
+local orig_notify = vim.notify
+vim.notify = function(msg, level, opts)
+    level = level or vim.log.levels.INFO
+    if type(level) == "number" and level >= vim.log.levels.WARN then
+        local lvl = level >= vim.log.levels.ERROR and "ERROR" or "WARN"
+        local text = type(msg) == "string" and msg or vim.inspect(msg)
+        append(err_log, ("[%s] %s"):format(lvl, (text:gsub("\n", " | "))))
+    end
+    return orig_notify(msg, level, opts)
+end
+pcall(function() vim.lsp.log.set_level(vim.log.levels.WARN) end) -- LSP errors -> stdpath("log")/lsp.log
 
 -- ── perf: startup time (spot regressions when you add plugins) ─────────────
 vim.api.nvim_create_autocmd("VimEnter", {
@@ -103,8 +121,18 @@ vim.api.nvim_create_user_command("Metrics", function()
     for i = math.max(1, #slow - 10), #slow do
         if slow[i] then out[#out + 1] = "  " .. slow[i] end
     end
+    -- recent errors/warnings
     out[#out + 1] = ""
-    out[#out + 1] = "raw: " .. usage_log .. "  |  " .. cmp_log
+    out[#out + 1] = "== recent errors/warnings (tail of errors.log) =="
+    local errs = {}
+    for line in lines(err_log) do errs[#errs + 1] = line end
+    if #errs == 0 then out[#out + 1] = "  (none logged)" end
+    for i = math.max(1, #errs - 15), #errs do
+        if errs[i] then out[#out + 1] = "  " .. errs[i] end
+    end
+
+    out[#out + 1] = ""
+    out[#out + 1] = "raw: " .. usage_log .. " | " .. cmp_log .. " | " .. err_log .. " | " .. logdir .. "/lsp.log"
 
     vim.cmd("botright new")
     vim.bo.buftype, vim.bo.bufhidden, vim.bo.swapfile = "nofile", "wipe", false

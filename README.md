@@ -116,10 +116,14 @@ Leader is `<Space>`.
 
 ## Metrics
 
-`config/metrics.lua` logs completion timing and command usage to `stdpath("log")`
-(`cmp-lag.log`, `usage.log`) and adds `:Metrics` for a summary. It's a **diagnostic
-tool** — remove the `require("rch3.config.metrics")` line from `lua/rch3/init.lua`
-once you don't need it.
+`config/metrics.lua` logs to `stdpath("log")` and adds `:Metrics` for a summary:
+- `cmp-lag.log` — completion timing (source fetch vs render)
+- `usage.log` — startup time + `:commands` typed by hand
+- `errors.log` — warnings/errors surfaced via `vim.notify` (LSP, plugins, diagnostics)
+- `lsp.log` — LSP protocol-level errors (log level set to WARN)
+
+It's a **diagnostic tool** — remove the `require("rch3.config.metrics")` line from
+`lua/rch3/init.lua` once you don't need it.
 
 ## Notes
 

@@ -24,7 +24,8 @@ Stack: lazy.nvim · blink.cmp · rustaceanvim · conform · nvim-treesitter · t
 `lua/rch3/config/metrics.lua` logs to stdpath("log"):
 - `cmp-lag.log` — completion timing (source fetch vs render) per keystroke
 - `usage.log` — startup time + every `:command` typed by hand
-- `:Metrics` — summary (last startup, most-typed commands, slowest completions)
+- `errors.log` — warnings/errors via `vim.notify` (LSP, plugins, diagnostics); `lsp.log` for LSP protocol errors
+- `:Metrics` — summary (last startup, most-typed commands, slowest completions, recent errors)
 
 **Clean up when perf is confirmed stable:** delete `metrics.lua`, remove its `require`
 and the `vim.g.nvim_start_ns` line from `lua/rch3/init.lua`. It does small per-keystroke
