@@ -1,8 +1,10 @@
+vim.g.nvim_start_ns = vim.loop.hrtime() -- startup timing marker (used by metrics)
 vim.g.mapleader = " " -- Set leader key before Lazy
 
 require("rch3.config.lazy")
 require("rch3.config.keymap")
 require("rch3.config.options")
+require("rch3.config.metrics")
 
 vim.cmd [[colorscheme solarized-osaka]]
 

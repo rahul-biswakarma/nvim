@@ -8,6 +8,10 @@ return {
             "html",
             "cssls",
             "ts_ls",
+            "basedpyright", -- python: types, completion
+            "ruff",         -- python: lint diagnostics
+            "eslint",       -- js/ts: lint diagnostics
+            "ols",          -- odin language server
         },
         handlers = {
             -- Default handler - will be called for each installed server

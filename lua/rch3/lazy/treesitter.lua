@@ -24,6 +24,7 @@ return {
                 "ocaml",
                 "ruby",
                 "rust",
+                "odin",
                 "html",
                 "css",
                 "json",

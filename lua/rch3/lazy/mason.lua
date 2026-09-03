@@ -6,6 +6,7 @@ return {
             "stylua",
             "prettier",
             "rustfmt",
+            "ruff",     -- python: format + lint
         },
         ui = {
             icons = {

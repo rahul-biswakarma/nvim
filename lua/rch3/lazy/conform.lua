@@ -26,6 +26,8 @@ return {
             yaml = { "prettier" },
             markdown = { "prettier" },
             rust = { "rustfmt" },
+            python = { "ruff_organize_imports", "ruff_format" },
+            -- odin: no standalone formatter in mason; ols formats via lsp_fallback
         },
         format_on_save = {
             timeout_ms = 500,

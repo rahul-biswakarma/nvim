@@ -26,7 +26,10 @@ return {
                 window = { border = 'rounded' }
             },
             ghost_text = { enabled = false },  -- Disable preview text
-            accept = { auto_insert = false },  -- Don't auto-insert, only on Enter
+            list = {
+                selection = { auto_insert = false },  -- Don't auto-insert, only on Enter
+                max_items = 50,  -- cap rendered items; huge lists were the render lag
+            },
             menu = {
                 draw = {
                     columns = {
@@ -59,6 +62,15 @@ return {
 
         sources = {
             default = { 'lsp', 'path', 'snippets', 'buffer' },
+            providers = {
+                -- rust_analyzer completion can take 300-440ms (esp. while warming up).
+                -- async = don't block the menu waiting for it; fill results in when they land.
+                lsp = { async = true },
+                -- snippets/buffer were building huge lists on the 1st keystroke (the lag).
+                -- Gate them behind a couple of chars; LSP still fires immediately.
+                snippets = { min_keyword_length = 2 },
+                buffer = { min_keyword_length = 3 },
+            },
         },
 
         fuzzy = { implementation = "prefer_rust_with_warning" }
