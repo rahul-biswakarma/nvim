@@ -67,6 +67,12 @@ vim.keymap.set({ 'n', 'v' }, '<leader>D', '"+D') -- delete line
 vim.keymap.set('n', '<leader>p', '"+p') -- paste after cursor
 vim.keymap.set('n', '<leader>P', '"+P') -- paste before cursor
 
+-- Disable mouse scroll (mouse is already off via options.lua; this also covers
+-- the case where mouse gets re-enabled)
+for _, key in ipairs({ "<ScrollWheelUp>", "<ScrollWheelDown>", "<ScrollWheelLeft>", "<ScrollWheelRight>" }) do
+    vim.keymap.set({ "n", "i", "v" }, key, "<Nop>")
+end
+
 -- Auto-close quickfix/location list after selecting an item
 vim.api.nvim_create_autocmd("FileType", {
     pattern = "qf",

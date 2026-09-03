@@ -6,8 +6,9 @@ Python, and Lua. Starts in ~85ms.
 
 ## Requirements
 
-- Neovim **0.10+** (developed on 0.12)
+- Neovim **0.11+** (developed on 0.12)
 - `git`, a C compiler (`cc`/`make`) — for `telescope-fzf-native` and `blink.cmp`'s fuzzy matcher
+- `tree-sitter` CLI (`brew install tree-sitter-cli`) — nvim-treesitter's `main` branch compiles parsers with it
 - A [Nerd Font](https://www.nerdfonts.com/) for icons
 - Optional: `lazygit`, `ripgrep` + `fd` (better Telescope), language toolchains (`rustup`, `node`, `python`)
 
@@ -125,3 +126,5 @@ once you don't need it.
 - Mouse is disabled (`mouse = ""`); system clipboard is used via explicit `<leader>` maps.
 - `lazy-lock.json` is gitignored — plugins track their latest compatible versions.
 - Update plugins with `:Lazy update`, parsers with `:TSUpdate`.
+- nvim-treesitter tracks the **`main`** branch (required for Neovim 0.11+); highlighting/indent
+  are enabled per-buffer via a `FileType` autocmd, not a global config table.
