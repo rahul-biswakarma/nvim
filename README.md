@@ -6,7 +6,7 @@ Python, and Lua. Starts in ~85ms.
 
 ## Requirements
 
-- Neovim **0.11+** (developed on 0.12)
+- Neovim **0.12+**
 - `git`, a C compiler (`cc`/`make`) — for `telescope-fzf-native` and `blink.cmp`'s fuzzy matcher
 - `tree-sitter` CLI (`brew install tree-sitter-cli`) — nvim-treesitter's `main` branch compiles parsers with it
 - A [Nerd Font](https://www.nerdfonts.com/) for icons
@@ -31,7 +31,7 @@ lua/rch3/
 │  ├─ lazy.lua               lazy.nvim bootstrap (spec = "rch3.lazy")
 │  ├─ options.lua            editor options + diagnostics
 │  ├─ keymap.lua             all keymaps
-│  └─ metrics.lua            usage/perf logging + :Metrics  (diagnostic, optional)
+│  └─ lsp.lua                shared LSP behavior
 └─ lazy/                     one file per plugin, each returns a lazy spec
 ```
 
@@ -113,17 +113,6 @@ Leader is `<Space>`.
 |-----|--------|
 | `<leader>w` / `<leader>q` | Write / quit |
 | `<leader>o` | Save & re-source current file |
-
-## Metrics
-
-`config/metrics.lua` logs to `stdpath("log")` and adds `:Metrics` for a summary:
-- `cmp-lag.log` — completion timing (source fetch vs render)
-- `usage.log` — startup time + `:commands` typed by hand
-- `errors.log` — warnings/errors surfaced via `vim.notify` (LSP, plugins, diagnostics)
-- `lsp.log` — LSP protocol-level errors (log level set to WARN)
-
-It's a **diagnostic tool** — remove the `require("rch3.config.metrics")` line from
-`lua/rch3/init.lua` once you don't need it.
 
 ## Notes
 
