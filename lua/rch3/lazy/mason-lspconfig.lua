@@ -13,17 +13,14 @@ return {
             "eslint",       -- js/ts: lint diagnostics
             "ols",          -- odin language server
         },
-        handlers = {
-            -- Default handler - will be called for each installed server
-            function(server_name)
-                require("lspconfig")[server_name].setup({})
-            end,
-            -- Disable sqls to avoid database connection errors
-            ["sqls"] = function() end,
-            -- Disable ts_ls, using typescript-tools instead
-            ["ts_ls"] = function() end,
-            -- Disable rust_analyzer, using rustaceanvim instead
-            ["rust_analyzer"] = function() end,
+        -- These have dedicated integrations (or are deliberately disabled).
+        -- mason-lspconfig v2 uses automatic_enable; the old handlers table is ignored.
+        automatic_enable = {
+            exclude = {
+                "rust_analyzer", -- rustaceanvim owns Rust LSP
+                "ts_ls",         -- typescript-tools owns TypeScript LSP
+                "sqls",          -- avoid unwanted database connection attempts
+            },
         },
     },
     dependencies = {
