@@ -27,12 +27,10 @@ vim.api.nvim_create_autocmd("BufWritePre", {
                 }
                 local res = client:request_sync("textDocument/codeAction", params, 1000, bufnr)
                 for _, action in ipairs(res and res.result or {}) do
+                    -- Only apply buffer edits. Do not execute interactive commands (such as
+                    -- picker commands that trigger Telescope) during synchronous BufWritePre.
                     if action.edit then
                         vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
-                    end
-                    if action.command then
-                        local cmd = type(action.command) == "table" and action.command or action
-                        client:request_sync("workspace/executeCommand", cmd, 1000, bufnr)
                     end
                 end
             end

@@ -111,7 +111,8 @@ Leader is `<Space>`.
 ### Misc
 | Key | Action |
 |-----|--------|
-| `<leader>w` / `<leader>q` | Write / quit |
+| `<C-s>` / `<leader>w` | Save file (all modes / normal) |
+| `<leader>q` | Quit |
 | `<leader>o` | Save & re-source current file |
 
 ## Notes

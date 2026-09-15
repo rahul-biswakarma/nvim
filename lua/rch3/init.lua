@@ -1,5 +1,6 @@
 vim.g.mapleader = " " -- Set leader key before Lazy
 
+require("rch3.config.debug_logger").setup()
 require("rch3.config.lazy")
 require("rch3.config.keymap")
 require("rch3.config.options")

@@ -29,9 +29,10 @@ end, { desc = "Exact string search (all files)" })
 -- Neo-tree toggle
 vim.keymap.set("n", "<C-n>", "<cmd>Neotree toggle<cr>", { desc = "Toggle Neo-tree" })
 
-vim.keymap.set("n", "<leader>q", ":quit<CR>")
-vim.keymap.set("n", "<leader>w", ":write<CR>")
-vim.keymap.set("n", "<leader>o", ":update<CR> :source<CR>")
+vim.keymap.set("n", "<leader>q", "<cmd>quit<CR>", { desc = "Quit" })
+vim.keymap.set("n", "<leader>w", "<cmd>write<CR>", { desc = "Write / Save" })
+vim.keymap.set({ "n", "i", "v" }, "<C-s>", "<cmd>write<CR><esc>", { desc = "Save file" })
+vim.keymap.set("n", "<leader>o", "<cmd>update<CR><cmd>source<CR>", { desc = "Save and source" })
 
 -- Session management
 vim.keymap.set("n", "<leader>ss", "<cmd>SessionSave<cr>", { desc = "Save session" })
